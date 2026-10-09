@@ -100,7 +100,7 @@ private fun AppRoot(vm: AppViewModel) {
                 title = { Text("Grabio", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     Icon(
-                        painter = painterResource(R.mipmap.ic_launcher_round),
+                        painter = painterResource(R.drawable.ic_logo),
                         contentDescription = null,
                         modifier = Modifier
                             .padding(start = 12.dp)
