@@ -12,6 +12,7 @@ import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.wskakuj.grabio.MainActivity
 import com.wskakuj.grabio.R
+import com.wskakuj.grabio.data.Store
 import java.time.LocalDate
 
 /**
@@ -31,6 +32,10 @@ class ReminderWorker(
         val dow = LocalDate.now().dayOfWeek.value // 1 = poniedziałek … 7 = niedziela
         val shouldNotify = if (mode == MODE_WEEKDAY) dow in 1..5 else dow in 6..7
         if (!shouldNotify) return Result.success()
+
+        // Nie zawracaj głowy w dniu wolnym ani wtedy, gdy wszystko już spakowane.
+        val today = Store(ctx).load().days.find { it.date == LocalDate.now().toString() }
+        if (today != null && (today.restDay || today.complete)) return Result.success()
 
         val granted = ContextCompat.checkSelfPermission(
             ctx, Manifest.permission.POST_NOTIFICATIONS

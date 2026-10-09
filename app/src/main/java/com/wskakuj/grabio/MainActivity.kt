@@ -172,6 +172,18 @@ private fun AppRoot(vm: AppViewModel, data: AppData) {
                             .size(32.dp)
                     )
                 },
+                actions = {
+                    // Mały skrót w prawym rogu: oznacz dzisiejszy dzień jako wolny.
+                    val todayRec = data.days.find { it.date == LocalDate.now().toString() }
+                    if (selectedTab == 0 && todayRec?.restDay != true) {
+                        TextButton(onClick = { vm.markRestDay() }) {
+                            Text(
+                                "🛋️ Wolne",
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.onSurface
