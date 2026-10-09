@@ -65,11 +65,16 @@ private fun capitalized(s: String) = s.replaceFirstChar { it.uppercase() }
 fun TodayScreen(vm: AppViewModel, data: AppData) {
     val key = vm.todayKey()
     val record = data.days.find { it.date == key }
-    var askTransport by remember { mutableStateOf(true) }
+    // Pytamy o transport tylko raz dziennie - gdy dla danego dnia jeszcze go nie wybrano.
+    var askTransport by remember {
+        mutableStateOf(record == null || record.transport.isEmpty())
+    }
 
     if (askTransport) {
         AlertDialog(
-            onDismissRequest = { if (record != null) askTransport = false },
+            onDismissRequest = {
+                if (record != null && record.transport.isNotEmpty()) askTransport = false
+            },
             icon = { Text("🚲", style = MaterialTheme.typography.headlineMedium) },
             title = { Text("Czym jedziesz na trening?") },
             text = {
