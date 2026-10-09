@@ -109,6 +109,13 @@ python release.py        # albo dwuklik release.bat
 Po chwili APK pojawi się w zakładce **Releases**. Zainstaluj go na telefonie — od tej
 pory aplikacja sama zaproponuje kolejne aktualizacje.
 
+## Gdy Actions nie rusza (diagnoza)
+
+Workflow buduje APK przy **każdym pushu na `main`** (APK jako artefakt przebiegu) oraz
+przy **tagu `vX.Y.Z`** (APK dołączony do Release). Jeśli zakładka Actions jest pusta,
+uruchom **`sprawdz.bat`** i wyślij wynik — pokaże, czy pliki i tag dotarły na GitHub,
+czy są ustawione sekrety i czy workflow w ogóle istnieje w repo.
+
 ## Budowanie lokalnie
 
 Wymaga JDK 17 i Android SDK (`sdk.dir` w `local.properties`):

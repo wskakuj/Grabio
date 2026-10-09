@@ -1,11 +1,12 @@
-# Buduje podpisany APK Grabio i dołącza go do Release.
-#  - po wypchnięciu tagu vX.Y.Z: APK ląduje w Release (z changelogiem z RELEASE_NOTES.md)
-#  - ręcznie (Actions → Run workflow): APK ląduje w Artifacts
-# Numer wersji i versionCode biorą się z tagu — release.py robi commit, tag i push.
+# Buduje podpisany APK Grabio.
+#  - push na main: APK jako artefakt (do pobrania z przebiegu),
+#  - push tagu vX.Y.Z: APK dołączony do Release (+ changelog z RELEASE_NOTES.md),
+#  - ręcznie: Actions -> "Release APK" -> Run workflow.
 name: Release APK
 
 on:
   push:
+    branches: [main]
     tags: ["v*.*.*"]
   workflow_dispatch:
 
