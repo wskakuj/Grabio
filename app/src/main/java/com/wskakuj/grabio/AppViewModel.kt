@@ -63,6 +63,40 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun weekday(): Int = LocalDate.now().dayOfWeek.value
     fun todayRecord(): DayRecord? = _data.value.days.find { it.date == todayKey() }
 
+    /**
+     * Uzgadnia dzisiejszą listę z planem i dodatkami: dorzuca nowe pozycje,
+     * usuwa skasowane i odzwierciedla zmiany nazw — zachowując odhaczenia.
+     * Ręcznie dodane „własne” pozycje zostają nietknięte.
+     */
+    private fun syncTodayWithPlan() {
+        val key = todayKey()
+        val weekday = LocalDate.now().dayOfWeek.value
+        update { d ->
+            val record = d.days.find { it.date == key }
+            if (record == null || record.restDay) return@update d
+
+            val checkedByName = record.items.associate { it.name to it.checked }
+            val custom = record.items.filter { it.group == GROUP_CUSTOM }
+
+            val fresh = mutableListOf<DayItem>()
+            d.weekPlan[weekday].orEmpty().forEach {
+                fresh += DayItem(newId(), it.name, group = GROUP_TRAINING)
+            }
+            d.essentials.forEach {
+                fresh += DayItem(newId(), it.name, group = GROUP_ESSENTIAL)
+            }
+            if (record.transport == TRANSPORT_BIKE) {
+                d.bikeExtras.forEach {
+                    fresh += DayItem(newId(), it.name, group = GROUP_BIKE)
+                }
+            }
+            val merged = fresh.map { it.copy(checked = checkedByName[it.name] ?: false) }
+            d.copy(days = d.days.map {
+                if (it.date == key) it.copy(items = merged + custom) else it
+            })
+        }
+    }
+
     /** Ponowne wczytanie danych z pliku (np. gdy widget/powiadomienie coś zmieniło). */
     fun reload() {
         val fresh = store.load()
@@ -230,12 +264,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val list = d.weekPlan[day].orEmpty()
             d.copy(weekPlan = d.weekPlan + (day to (list + ChecklistItem(newId(), trimmed))))
         }
+        syncTodayWithPlan()
     }
 
     fun removeWeekItem(day: Int, id: String) {
         update { d ->
             d.copy(weekPlan = d.weekPlan + (day to d.weekPlan[day].orEmpty().filterNot { it.id == id }))
         }
+        syncTodayWithPlan()
     }
 
     fun renameWeekItem(day: Int, id: String, newName: String) {
@@ -246,6 +282,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (it.id == id) it.copy(name = trimmed) else it
             }))
         }
+        syncTodayWithPlan()
     }
 
     fun moveWeekItem(day: Int, from: Int, to: Int) {
@@ -259,6 +296,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 d.copy(weekPlan = d.weekPlan + (day to list.toList()))
             }
         }
+        syncTodayWithPlan()
     }
 
     // --- Dodatki ---
@@ -267,10 +305,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return
         update { d -> d.copy(essentials = d.essentials + ChecklistItem(newId(), trimmed)) }
+        syncTodayWithPlan()
     }
 
     fun removeEssential(id: String) {
         update { d -> d.copy(essentials = d.essentials.filterNot { it.id == id }) }
+        syncTodayWithPlan()
     }
 
     fun renameEssential(id: String, newName: String) {
@@ -279,6 +319,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         update { d ->
             d.copy(essentials = d.essentials.map { if (it.id == id) it.copy(name = trimmed) else it })
         }
+        syncTodayWithPlan()
     }
 
     fun moveEssential(from: Int, to: Int) {
@@ -291,16 +332,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 d.copy(essentials = list.toList())
             }
         }
+        syncTodayWithPlan()
     }
 
     fun addBikeExtra(name: String) {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return
         update { d -> d.copy(bikeExtras = d.bikeExtras + ChecklistItem(newId(), trimmed)) }
+        syncTodayWithPlan()
     }
 
     fun removeBikeExtra(id: String) {
         update { d -> d.copy(bikeExtras = d.bikeExtras.filterNot { it.id == id }) }
+        syncTodayWithPlan()
     }
 
     fun renameBikeExtra(id: String, newName: String) {
@@ -309,6 +353,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         update { d ->
             d.copy(bikeExtras = d.bikeExtras.map { if (it.id == id) it.copy(name = trimmed) else it })
         }
+        syncTodayWithPlan()
     }
 
     fun moveBikeExtra(from: Int, to: Int) {
@@ -321,6 +366,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 d.copy(bikeExtras = list.toList())
             }
         }
+        syncTodayWithPlan()
     }
 
     // --- Motyw ---
