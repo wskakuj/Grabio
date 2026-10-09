@@ -13,8 +13,8 @@ android {
         applicationId = "com.wskakuj.grabio"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1000014
-        versionName = "1.0.14"
+        versionCode = 1000015
+        versionName = "1.0.15"
     }
 
     // Podpisywanie builda release. W GitHub Actions ustawiane zmiennymi

@@ -42,6 +42,13 @@ fun HistoryScreen(vm: AppViewModel, data: AppData) {
     val allPast = data.days.filter { it.date < today }.sortedByDescending { it.date }
     val statDays = allPast.filter { it.done > 0 }
     val byDate = data.days.associateBy { it.date }
+    // Dzisiejszy dzień pokazujemy na liście od razu (podpisany „Dziś”), ale
+    // statystyki i seria liczą się tylko z dni, które już się skończyły.
+    val todayRec = byDate[today]
+    val listed = buildList {
+        if (todayRec != null && (todayRec.restDay || todayRec.items.isNotEmpty())) add(todayRec)
+        addAll(allPast)
+    }
 
     Column(
         modifier = Modifier
@@ -55,10 +62,10 @@ fun HistoryScreen(vm: AppViewModel, data: AppData) {
         )
         Spacer(Modifier.height(12.dp))
 
-        if (allPast.isEmpty()) {
+        if (listed.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    "Brak minionych dni.\nStatystyki pojawią się po pierwszym treningu.",
+                    "Nic tu jeszcze nie ma.\nStatystyki pojawią się po pierwszym treningu.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -174,7 +181,7 @@ fun HistoryScreen(vm: AppViewModel, data: AppData) {
 
         Spacer(Modifier.height(16.dp))
         Text(
-            "Minione dni",
+            "Dni",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
@@ -184,7 +191,7 @@ fun HistoryScreen(vm: AppViewModel, data: AppData) {
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(allPast, key = { it.date }) { d -> DayRow(d) }
+            items(listed, key = { it.date }) { d -> DayRow(d, isToday = d.date == today) }
         }
     }
 }
@@ -218,7 +225,7 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
 }
 
 @Composable
-private fun DayRow(d: DayRecord) {
+private fun DayRow(d: DayRecord, isToday: Boolean = false) {
     val transport = when {
         d.restDay -> "🛋️"
         d.transport == TRANSPORT_CAR -> "🚗"
@@ -229,7 +236,7 @@ private fun DayRow(d: DayRecord) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    "$transport  ${d.date}",
+                    "$transport  ${if (isToday) "Dziś" else d.date}",
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.weight(1f)
                 )

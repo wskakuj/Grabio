@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -176,11 +178,12 @@ private fun AppRoot(vm: AppViewModel, data: AppData) {
                     // Mały skrót w prawym rogu: oznacz dzisiejszy dzień jako wolny.
                     val todayRec = data.days.find { it.date == LocalDate.now().toString() }
                     if (selectedTab == 0 && todayRec?.restDay != true) {
-                        TextButton(onClick = { vm.markRestDay() }) {
-                            Text(
-                                "🛋️ Wolne",
-                                style = MaterialTheme.typography.labelLarge
-                            )
+                        FilledTonalButton(
+                            onClick = { vm.markRestDay() },
+                            modifier = Modifier.padding(end = 6.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp)
+                        ) {
+                            Text("🛋️ Wolne", style = MaterialTheme.typography.labelLarge)
                         }
                     }
                 },
