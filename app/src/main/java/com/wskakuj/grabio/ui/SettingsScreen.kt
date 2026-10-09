@@ -9,7 +9,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -23,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.wskakuj.grabio.AppViewModel
 import com.wskakuj.grabio.BuildConfig
@@ -39,63 +44,86 @@ fun SettingsScreen(vm: AppViewModel, data: AppData) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Ustawienia", style = MaterialTheme.typography.titleLarge)
-        Spacer(Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Przypomnienia", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    "Powiadomienie o wybranej godzinie, żeby nie zapomnieć się spakować.",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-            Switch(
-                checked = enabled,
-                onCheckedChange = {
-                    enabled = it
-                    vm.setReminder(it, wdHour, wdMinute, weHour, weMinute)
-                }
-            )
-        }
-
-        Spacer(Modifier.height(16.dp))
-        Text("Poniedziałek–piątek", style = MaterialTheme.typography.labelLarge)
-        Spacer(Modifier.height(4.dp))
-        TimeRow(wdHour, wdMinute, { wdHour = it }, { wdMinute = it })
-
-        Spacer(Modifier.height(12.dp))
-        Text("Sobota–niedziela", style = MaterialTheme.typography.labelLarge)
-        Spacer(Modifier.height(4.dp))
-        TimeRow(weHour, weMinute, { weHour = it }, { weMinute = it })
-
-        Spacer(Modifier.height(12.dp))
-        Button(onClick = { vm.setReminder(enabled, wdHour, wdMinute, weHour, weMinute) }) {
-            Text("Zapisz godziny")
-        }
-
-        Spacer(Modifier.height(28.dp))
-        Text("Aktualizacje", style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(4.dp))
         Text(
-            "Wersja: ${BuildConfig.VERSION_NAME}",
-            style = MaterialTheme.typography.bodyMedium
+            "Ustawienia",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
         )
-        Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = { vm.checkForUpdate() }) {
-            Text("Sprawdź aktualizacje")
+
+        Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+            Column(Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Przypomnienia",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "Powiadomienie, żeby nie zapomnieć się spakować.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = enabled,
+                        onCheckedChange = {
+                            enabled = it
+                            vm.setReminder(it, wdHour, wdMinute, weHour, weMinute)
+                        }
+                    )
+                }
+
+                HorizontalDivider(Modifier.padding(vertical = 14.dp))
+
+                Text("Poniedziałek–piątek", style = MaterialTheme.typography.labelLarge)
+                Spacer(Modifier.height(6.dp))
+                TimeRow(wdHour, wdMinute, { wdHour = it }, { wdMinute = it })
+
+                Spacer(Modifier.height(12.dp))
+                Text("Sobota–niedziela", style = MaterialTheme.typography.labelLarge)
+                Spacer(Modifier.height(6.dp))
+                TimeRow(weHour, weMinute, { weHour = it }, { weMinute = it })
+
+                Spacer(Modifier.height(14.dp))
+                Button(onClick = { vm.setReminder(enabled, wdHour, wdMinute, weHour, weMinute) }) {
+                    Text("Zapisz godziny")
+                }
+            }
         }
 
-        Spacer(Modifier.height(24.dp))
+        Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+            Column(Modifier.padding(16.dp)) {
+                Text(
+                    "Aktualizacje",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Wersja: ${BuildConfig.VERSION_NAME}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(onClick = { vm.checkForUpdate() }) {
+                    Text("Sprawdź aktualizacje")
+                }
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
         Text(
             "Grabio — lista pakowania na trening.",
-            style = MaterialTheme.typography.bodySmall
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -108,7 +136,7 @@ private fun TimeRow(
     onMinute: (Int) -> Unit
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("Godzina", modifier = Modifier.width(90.dp))
+        Text("Godzina", modifier = Modifier.width(80.dp))
         OutlinedTextField(
             value = hour.toString().padStart(2, '0'),
             onValueChange = { v ->
