@@ -13,6 +13,7 @@ import com.wskakuj.grabio.data.GROUP_ESSENTIAL
 import com.wskakuj.grabio.data.GROUP_TRAINING
 import com.wskakuj.grabio.data.Store
 import com.wskakuj.grabio.data.TRANSPORT_BIKE
+import com.wskakuj.grabio.notify.ProgressNotifier
 import com.wskakuj.grabio.notify.ReminderScheduler
 import com.wskakuj.grabio.update.UpdateManager
 import com.wskakuj.grabio.weather.Weather
@@ -45,10 +46,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val _weather = MutableStateFlow<Weather.Result?>(null)
     val weather: StateFlow<Weather.Result?> = _weather.asStateFlow()
 
+    init {
+        // odtworzenie wskaźnika postępu po ponownym uruchomieniu aplikacji
+        ProgressNotifier.sync(app, _data.value.days.find { it.date == todayKey() })
+    }
+
     private fun update(block: (AppData) -> AppData) {
         val newData = block(_data.value)
         _data.value = newData
         store.save(newData)
+        ProgressNotifier.sync(getApplication(), newData.days.find { it.date == todayKey() })
     }
 
     fun newId(): String = UUID.randomUUID().toString()
@@ -59,7 +66,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Ponowne wczytanie danych z pliku (np. gdy widget/powiadomienie coś zmieniło). */
     fun reload() {
         val fresh = store.load()
-        if (fresh != _data.value) _data.value = fresh
+        if (fresh != _data.value) {
+            _data.value = fresh
+            ProgressNotifier.sync(getApplication(), fresh.days.find { it.date == todayKey() })
+        }
     }
 
     // --- Lista dnia ---

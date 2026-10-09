@@ -26,6 +26,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
         }
         store.save(data.copy(days = newDays))
         WidgetRefresh.update(context)
+        ProgressNotifier.syncFromStore(context)
 
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.cancel(NOTIFICATION_ID)

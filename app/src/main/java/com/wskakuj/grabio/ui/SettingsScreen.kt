@@ -73,7 +73,7 @@ fun SettingsScreen(vm: AppViewModel, data: AppData) {
                 )
                 Spacer(Modifier.height(10.dp))
                 val tryby = listOf(
-                    THEME_SYSTEM to "Systemowy",
+                    THEME_SYSTEM to "System",
                     THEME_LIGHT to "Jasny",
                     THEME_DARK to "Ciemny"
                 )

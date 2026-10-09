@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private data class Tab(val label: String, val icon: ImageVector)
+private data class Tab(val label: String, val iconRes: Int)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -130,10 +130,10 @@ private fun AppRoot(vm: AppViewModel, data: AppData) {
     LaunchedEffect(data) { WidgetRefresh.update(context) }
 
     val tabs = listOf(
-        Tab("Dziś", Icons.Filled.CheckCircle),
-        Tab("Plan", Icons.AutoMirrored.Filled.List),
-        Tab("Historia", Icons.Filled.DateRange),
-        Tab("Ustawienia", Icons.Filled.Settings)
+        Tab("Dziś", R.drawable.ic_tab_today),
+        Tab("Plan", R.drawable.ic_tab_plan),
+        Tab("Historia", R.drawable.ic_tab_history),
+        Tab("Ustawienia", R.drawable.ic_tab_settings)
     )
 
     Scaffold(
@@ -184,7 +184,7 @@ private fun AppRoot(vm: AppViewModel, data: AppData) {
                     NavigationBarItem(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
-                        icon = { Icon(tab.icon, contentDescription = tab.label) },
+                        icon = { Icon(painterResource(tab.iconRes), contentDescription = tab.label) },
                         label = { Text(tab.label) },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
