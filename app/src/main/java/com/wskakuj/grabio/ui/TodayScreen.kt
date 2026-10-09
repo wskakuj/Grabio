@@ -53,6 +53,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.wskakuj.grabio.AppViewModel
 import com.wskakuj.grabio.data.AppData
+import com.wskakuj.grabio.data.BAG_BACKPACK
+import com.wskakuj.grabio.data.BAG_TOTE
 import com.wskakuj.grabio.data.DayItem
 import com.wskakuj.grabio.data.DayRecord
 import com.wskakuj.grabio.data.GROUP_BIKE
@@ -309,6 +311,22 @@ private fun HeroCard(record: DayRecord, vm: AppViewModel) {
                     onClick = { vm.setTransport(TRANSPORT_BIKE) },
                     shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
                     label = { Text("🚲  Rower") }
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            // Plecak czy torba — domyślnie torba w poniedziałek i czwartek.
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                SegmentedButton(
+                    selected = vm.todayBag() != BAG_TOTE,
+                    onClick = { vm.setBag(BAG_BACKPACK) },
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                    label = { Text("🎒  Plecak") }
+                )
+                SegmentedButton(
+                    selected = vm.todayBag() == BAG_TOTE,
+                    onClick = { vm.setBag(BAG_TOTE) },
+                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                    label = { Text("👜  Torba") }
                 )
             }
         }

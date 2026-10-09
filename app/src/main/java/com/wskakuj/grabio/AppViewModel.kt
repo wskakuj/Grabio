@@ -13,6 +13,7 @@ import com.wskakuj.grabio.data.GROUP_ESSENTIAL
 import com.wskakuj.grabio.data.GROUP_TRAINING
 import com.wskakuj.grabio.data.Store
 import com.wskakuj.grabio.data.TRANSPORT_BIKE
+import com.wskakuj.grabio.data.defaultBag
 import com.wskakuj.grabio.notify.ProgressNotifier
 import com.wskakuj.grabio.notify.ReminderScheduler
 import com.wskakuj.grabio.update.UpdateManager
@@ -92,7 +93,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
             val merged = fresh.map { it.copy(checked = checkedByName[it.name] ?: false) }
             d.copy(days = d.days.map {
-                if (it.date == key) it.copy(items = merged + custom) else it
+                if (it.date == key) {
+                    it.copy(items = merged + custom, bag = it.bag.ifEmpty { defaultBag(weekday) })
+                } else {
+                    it
+                }
             })
         }
     }
@@ -130,8 +135,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val prev = existing?.items?.associate { it.name to it.checked } ?: emptyMap()
         val fresh = buildItems(weekday(), mode).map { it.copy(checked = prev[it.name] ?: false) }
         val custom = existing?.items?.filter { it.group == GROUP_CUSTOM } ?: emptyList()
-        val record = DayRecord(date = key, transport = mode, items = fresh + custom)
+        val bag = existing?.bag?.ifEmpty { defaultBag(weekday()) } ?: defaultBag(weekday())
+        val record = DayRecord(date = key, transport = mode, bag = bag, items = fresh + custom)
         update { d -> d.copy(days = d.days.filterNot { it.date == key } + record) }
+    }
+
+    /** Co dziś bierzemy: plecak czy torba (z domyślną wartością dla dnia tygodnia). */
+    fun todayBag(): String =
+        todayRecord()?.bag?.ifEmpty { defaultBag(weekday()) } ?: defaultBag(weekday())
+
+    fun setBag(mode: String) {
+        val key = todayKey()
+        update { d ->
+            d.copy(days = d.days.map {
+                if (it.date == key) it.copy(bag = mode) else it
+            })
+        }
     }
 
     fun toggleItem(date: String, itemId: String) {

@@ -12,6 +12,14 @@ const val GROUP_CUSTOM = "wlasne"
 const val TRANSPORT_CAR = "car"
 const val TRANSPORT_BIKE = "bike"
 
+/** Co bierzemy na trening. */
+const val BAG_BACKPACK = "plecak"
+const val BAG_TOTE = "torba"
+
+/** Domyślnie: torba w poniedziałek (1) i czwartek (4), w pozostałe dni plecak. */
+fun defaultBag(weekday: Int): String =
+    if (weekday == 1 || weekday == 4) BAG_TOTE else BAG_BACKPACK
+
 /** Motyw aplikacji. */
 const val THEME_SYSTEM = "system"
 const val THEME_LIGHT = "light"
@@ -39,6 +47,7 @@ data class DayItem(
 data class DayRecord(
     val date: String,
     val transport: String = "",
+    val bag: String = "",
     val items: List<DayItem> = emptyList(),
     val restDay: Boolean = false
 ) {

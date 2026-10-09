@@ -67,7 +67,7 @@ class GrabioWidget : AppWidgetProvider() {
             }
         }
         store.save(data.copy(days = newDays))
-        ProgressNotifier.syncFromStore(context)
+        runCatching { ProgressNotifier.syncFromStore(context) }
     }
 
     private fun packAll(context: Context) {
@@ -79,7 +79,7 @@ class GrabioWidget : AppWidgetProvider() {
             else day.copy(items = day.items.map { it.copy(checked = true) })
         }
         store.save(data.copy(days = newDays))
-        ProgressNotifier.syncFromStore(context)
+        runCatching { ProgressNotifier.syncFromStore(context) }
     }
 
     private fun build(context: Context): RemoteViews {

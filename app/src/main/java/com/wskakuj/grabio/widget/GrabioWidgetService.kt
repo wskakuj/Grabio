@@ -1,6 +1,5 @@
 package com.wskakuj.grabio.widget
 
-import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
@@ -49,19 +48,13 @@ class GrabioWidgetFactory(private val context: Context) : RemoteViewsService.Rem
             R.id.row_text,
             if (item.checked) 0xFF8A948A.toInt() else 0xFFEDEDE6.toInt()
         )
-        // Każdy wiersz dostaje WŁASNY PendingIntent (unikalny requestCode = id pozycji).
-        // To pewniejsze niż "fill-in intent" z szablonu — kliknięcie zawsze trafia.
-        val tap = Intent(context, GrabioWidget::class.java).apply {
-            action = GrabioWidget.ACTION_TOGGLE
+        // Widgety kolekcyjne NIE pozwalają ustawić własnego PendingIntent na wierszu
+        // (framework to ignoruje). Jedyna działająca droga to "fill-in intent",
+        // który widget dokleja do szablonu ustawionego na ListView w GrabioWidget.
+        val fillIn = Intent().apply {
             putExtra(GrabioWidget.EXTRA_ID, item.id)
         }
-        val tapPending = PendingIntent.getBroadcast(
-            context,
-            item.id.hashCode(),
-            tap,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        views.setOnClickPendingIntent(R.id.widget_row_root, tapPending)
+        views.setOnClickFillInIntent(R.id.widget_row_root, fillIn)
         return views
     }
 
