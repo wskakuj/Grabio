@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,23 +43,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.wskakuj.grabio.data.AppData
 import com.wskakuj.grabio.notify.Notifications
 import com.wskakuj.grabio.ui.HistoryScreen
 import com.wskakuj.grabio.ui.SettingsScreen
 import com.wskakuj.grabio.ui.TodayScreen
 import com.wskakuj.grabio.ui.WeekPlanScreen
 import com.wskakuj.grabio.ui.theme.GrabioTheme
+import com.wskakuj.grabio.widget.WidgetRefresh
 
 class MainActivity : ComponentActivity() {
+
+    private val vm: AppViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,11 +78,17 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            GrabioTheme {
-                val vm: AppViewModel = viewModel()
-                AppRoot(vm)
+            val data by vm.data.collectAsState()
+            GrabioTheme(mode = data.themeMode) {
+                AppRoot(vm, data)
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // widget albo powiadomienie mogły coś zmienić, gdy aplikacja była w tle
+        vm.reload()
     }
 }
 
@@ -86,12 +96,19 @@ private data class Tab(val label: String, val icon: ImageVector)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AppRoot(vm: AppViewModel) {
-    val data by vm.data.collectAsState()
+private fun AppRoot(vm: AppViewModel, data: AppData) {
     val updateState by vm.updateState.collectAsState()
+    val weatherHint by vm.weatherHint.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
 
-    LaunchedEffect(Unit) { vm.checkForUpdate() }
+    LaunchedEffect(Unit) {
+        vm.checkForUpdate()
+        vm.refreshWeather()
+    }
+
+    // odśwież widget, gdy zmienią się dane
+    LaunchedEffect(data) { WidgetRefresh.update(context) }
 
     val tabs = listOf(
         Tab("Dziś", Icons.Filled.CheckCircle),
@@ -106,18 +123,16 @@ private fun AppRoot(vm: AppViewModel) {
                 title = {
                     Text(
                         text = buildAnnotatedString {
-                            withStyle(SpanStyle(fontWeight = FontWeight.Black, letterSpacing = 1.sp)) {
-                                append("Grab")
-                            }
+                            withStyle(
+                                SpanStyle(fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                            ) { append("Grab") }
                             withStyle(
                                 SpanStyle(
                                     fontWeight = FontWeight.Black,
                                     letterSpacing = 1.sp,
                                     color = MaterialTheme.colorScheme.primary
                                 )
-                            ) {
-                                append("io")
-                            }
+                            ) { append("io") }
                         },
                         style = MaterialTheme.typography.titleLarge
                     )
@@ -156,7 +171,7 @@ private fun AppRoot(vm: AppViewModel) {
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (selectedTab) {
-                0 -> TodayScreen(vm, data)
+                0 -> TodayScreen(vm, data, weatherHint)
                 1 -> WeekPlanScreen(vm, data)
                 2 -> HistoryScreen(vm, data)
                 else -> SettingsScreen(vm, data)

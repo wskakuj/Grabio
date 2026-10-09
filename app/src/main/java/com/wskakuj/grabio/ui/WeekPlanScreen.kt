@@ -12,14 +12,12 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -64,11 +62,13 @@ fun WeekPlanScreen(vm: AppViewModel, data: AppData) {
             Spacer(Modifier.height(4.dp))
         }
 
-        items((1..7).toList(), key = { it }) { day ->
-            DayCard(
-                title = weekdayNamePl(day),
-                names = data.weekPlan[day].orEmpty().map { it.name }
-            ) { editingDay = day }
+        (1..7).forEach { day ->
+            item(key = day) {
+                DayCard(
+                    title = weekdayNamePl(day),
+                    names = data.weekPlan[day].orEmpty().map { it.name }
+                ) { editingDay = day }
+            }
         }
 
         item {
@@ -78,6 +78,7 @@ fun WeekPlanScreen(vm: AppViewModel, data: AppData) {
                 items = data.essentials,
                 onRemove = { vm.removeEssential(it) },
                 onAdd = { vm.addEssential(it) },
+                onMove = { f, t -> vm.moveEssential(f, t) },
                 addLabel = "Dodaj codzienny dodatek"
             )
         }
@@ -88,6 +89,7 @@ fun WeekPlanScreen(vm: AppViewModel, data: AppData) {
                 items = data.bikeExtras,
                 onRemove = { vm.removeBikeExtra(it) },
                 onAdd = { vm.addBikeExtra(it) },
+                onMove = { f, t -> vm.moveBikeExtra(f, t) },
                 addLabel = "Dodaj rowerowy dodatek"
             )
         }
@@ -115,7 +117,10 @@ private fun DayCard(title: String, names: List<String>, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(title.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    title.replaceFirstChar { it.uppercase() },
+                    style = MaterialTheme.typography.titleMedium
+                )
                 if (names.isEmpty()) {
                     Text(
                         "Dzień wolny",
@@ -146,6 +151,7 @@ private fun ListCard(
     items: List<ChecklistItem>,
     onRemove: (String) -> Unit,
     onAdd: (String) -> Unit,
+    onMove: (Int, Int) -> Unit,
     addLabel: String
 ) {
     var text by remember { mutableStateOf("") }
@@ -159,15 +165,19 @@ private fun ListCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            items.forEach { item ->
+            ReorderableColumn(
+                count = items.size,
+                onMove = onMove,
+                rowHeight = 48.dp
+            ) { index, handle ->
                 Row(
-                    modifier = Modifier
+                    modifier = handle
                         .fillMaxWidth()
                         .padding(start = 16.dp, end = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(item.name, modifier = Modifier.weight(1f))
-                    IconButton(onClick = { onRemove(item.id) }) {
+                    Text(items[index].name, modifier = Modifier.weight(1f))
+                    IconButton(onClick = { onRemove(items[index].id) }) {
                         Icon(
                             Icons.Filled.Close,
                             contentDescription = "Usuń",
@@ -214,17 +224,27 @@ private fun DayEditor(
         title = { Text("Plan — ${weekdayNamePl(day)}") },
         text = {
             Column {
+                Text(
+                    "Przytrzymaj wiersz, żeby zmienić kolejność.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(6.dp))
                 if (items.isEmpty()) {
                     Text("Brak pozycji. Dodaj pierwszą poniżej.")
                 }
-                LazyColumn(modifier = Modifier.heightIn(max = 240.dp)) {
-                    items(items, key = { it.id }) { item ->
+                Column(Modifier.heightIn(max = 260.dp)) {
+                    ReorderableColumn(
+                        count = items.size,
+                        onMove = { f, t -> vm.moveWeekItem(day, f, t) },
+                        rowHeight = 48.dp
+                    ) { index, handle ->
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = handle.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(item.name, modifier = Modifier.weight(1f))
-                            IconButton(onClick = { vm.removeWeekItem(day, item.id) }) {
+                            Text(items[index].name, modifier = Modifier.weight(1f))
+                            IconButton(onClick = { vm.removeWeekItem(day, items[index].id) }) {
                                 Icon(Icons.Filled.Close, contentDescription = "Usuń")
                             }
                         }

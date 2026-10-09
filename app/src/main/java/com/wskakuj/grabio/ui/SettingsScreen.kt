@@ -13,10 +13,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,7 +36,11 @@ import androidx.compose.ui.unit.dp
 import com.wskakuj.grabio.AppViewModel
 import com.wskakuj.grabio.BuildConfig
 import com.wskakuj.grabio.data.AppData
+import com.wskakuj.grabio.data.THEME_DARK
+import com.wskakuj.grabio.data.THEME_LIGHT
+import com.wskakuj.grabio.data.THEME_SYSTEM
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(vm: AppViewModel, data: AppData) {
     var enabled by remember { mutableStateOf(data.reminderEnabled) }
@@ -40,6 +48,7 @@ fun SettingsScreen(vm: AppViewModel, data: AppData) {
     var wdMinute by remember { mutableIntStateOf(data.weekdayMinute) }
     var weHour by remember { mutableIntStateOf(data.weekendHour) }
     var weMinute by remember { mutableIntStateOf(data.weekendMinute) }
+    var city by remember { mutableStateOf(data.cityName) }
 
     Column(
         modifier = Modifier
@@ -54,6 +63,34 @@ fun SettingsScreen(vm: AppViewModel, data: AppData) {
             fontWeight = FontWeight.Bold
         )
 
+        // --- wygląd ---
+        Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+            Column(Modifier.padding(16.dp)) {
+                Text(
+                    "Wygląd",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(10.dp))
+                val tryby = listOf(
+                    THEME_SYSTEM to "Systemowy",
+                    THEME_LIGHT to "Jasny",
+                    THEME_DARK to "Ciemny"
+                )
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    tryby.forEachIndexed { index, (mode, label) ->
+                        SegmentedButton(
+                            selected = data.themeMode == mode,
+                            onClick = { vm.setThemeMode(mode) },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = tryby.size),
+                            label = { Text(label) }
+                        )
+                    }
+                }
+            }
+        }
+
+        // --- przypomnienia ---
         Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
             Column(Modifier.padding(16.dp)) {
                 Row(
@@ -99,6 +136,43 @@ fun SettingsScreen(vm: AppViewModel, data: AppData) {
             }
         }
 
+        // --- pogoda ---
+        Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+            Column(Modifier.padding(16.dp)) {
+                Text(
+                    "Pogoda",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    "Podaj miasto — w dni rowerowe podpowiem, gdy ma padać.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(10.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = city,
+                        onValueChange = { city = it },
+                        label = { Text("Miasto") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Button(onClick = { vm.setCity(city) }) { Text("Zapisz") }
+                }
+                if (data.cityLat != null) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Ustawiono: ${data.cityName}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+
+        // --- aktualizacje ---
         Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
             Column(Modifier.padding(16.dp)) {
                 Text(

@@ -12,7 +12,12 @@ const val GROUP_CUSTOM = "wlasne"
 const val TRANSPORT_CAR = "car"
 const val TRANSPORT_BIKE = "bike"
 
-/** Pojedyncza pozycja w planie / dodatkach (np. "Bidon z wodą"). */
+/** Motyw aplikacji. */
+const val THEME_SYSTEM = "system"
+const val THEME_LIGHT = "light"
+const val THEME_DARK = "dark"
+
+/** Pojedyncza pozycja w planie / dodatkach. */
 @Serializable
 data class ChecklistItem(
     val id: String,
@@ -39,6 +44,7 @@ data class DayRecord(
     val total: Int get() = items.size
     val done: Int get() = items.count { it.checked }
     val progress: Float get() = if (total == 0) 0f else done.toFloat() / total.toFloat()
+    val complete: Boolean get() = total > 0 && done == total
 }
 
 /** Cały stan aplikacji zapisywany do pliku JSON. */
@@ -52,7 +58,11 @@ data class AppData(
     val weekdayHour: Int = 16,
     val weekdayMinute: Int = 20,
     val weekendHour: Int = 17,
-    val weekendMinute: Int = 0
+    val weekendMinute: Int = 0,
+    val themeMode: String = THEME_SYSTEM,
+    val cityName: String = "",
+    val cityLat: Double? = null,
+    val cityLon: Double? = null
 )
 
 /** Klucz: 1 = poniedziałek … 7 = niedziela. */

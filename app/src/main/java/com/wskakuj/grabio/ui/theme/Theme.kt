@@ -6,6 +6,8 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import com.wskakuj.grabio.data.THEME_DARK
+import com.wskakuj.grabio.data.THEME_LIGHT
 
 // Paleta z ikony: neonowa zieleń + głęboka czerń.
 private val Neon = Color(0xFFA3FF12)
@@ -58,7 +60,11 @@ private val DarkColors = darkColorScheme(
 )
 
 @Composable
-fun GrabioTheme(content: @Composable () -> Unit) {
-    val colors = if (isSystemInDarkTheme()) DarkColors else LightColors
-    MaterialTheme(colorScheme = colors, content = content)
+fun GrabioTheme(mode: String = "system", content: @Composable () -> Unit) {
+    val dark = when (mode) {
+        THEME_LIGHT -> false
+        THEME_DARK -> true
+        else -> isSystemInDarkTheme()
+    }
+    MaterialTheme(colorScheme = if (dark) DarkColors else LightColors, content = content)
 }

@@ -1,5 +1,7 @@
 package com.wskakuj.grabio.ui
 
+import android.widget.Toast
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,6 +43,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -62,7 +67,7 @@ fun weekdayNamePl(dow: Int): String = listOf(
 private fun capitalized(s: String) = s.replaceFirstChar { it.uppercase() }
 
 @Composable
-fun TodayScreen(vm: AppViewModel, data: AppData) {
+fun TodayScreen(vm: AppViewModel, data: AppData, weatherHint: String?) {
     val key = vm.todayKey()
     val record = data.days.find { it.date == key }
     // Pytamy o transport tylko raz dziennie - gdy dla danego dnia jeszcze go nie wybrano.
@@ -116,35 +121,64 @@ fun TodayScreen(vm: AppViewModel, data: AppData) {
         return
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item { HeroCard(record, vm) }
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item { HeroCard(record, vm) }
 
-        val groups = listOf(
-            Triple(GROUP_TRAINING, "🏋️  Trening", "Rzeczy na dzisiejszy trening"),
-            Triple(GROUP_ESSENTIAL, "✅  Codziennie", "Zawsze zabierz ze sobą"),
-            Triple(GROUP_BIKE, "🚲  Rower", "Bo jedziesz rowerem"),
-            Triple(GROUP_CUSTOM, "➕  Własne", "Dodane ręcznie")
-        )
-        groups.forEach { (group, label, sub) ->
-            val groupItems = record.items.filter { it.group == group }
-            if (groupItems.isNotEmpty()) {
-                item(key = "h_$group") {
-                    SectionCard(label, sub, groupItems, key, vm)
+            if (weatherHint != null) {
+                item { WeatherHintCard(weatherHint) }
+            }
+
+            val groups = listOf(
+                Triple(GROUP_TRAINING, "🏋️  Trening", "Rzeczy na dzisiejszy trening"),
+                Triple(GROUP_ESSENTIAL, "✅  Codziennie", "Zawsze zabierz ze sobą"),
+                Triple(GROUP_BIKE, "🚲  Rower", "Bo jedziesz rowerem"),
+                Triple(GROUP_CUSTOM, "➕  Własne", "Przytrzymaj i przeciągnij, żeby zmienić kolejność")
+            )
+            groups.forEach { (group, label, sub) ->
+                val groupItems = record.items.filter { it.group == group }
+                if (groupItems.isNotEmpty()) {
+                    item(key = "h_$group") {
+                        SectionCard(group, label, sub, groupItems, key, vm)
+                    }
+                }
+            }
+
+            item { AddItemCard(key, vm) }
+            item {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    TextButton(onClick = { vm.clearDay(key) }) {
+                        Text("Wyczyść listę na dziś")
+                    }
                 }
             }
         }
 
-        item { AddItemCard(key, vm) }
-        item {
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                TextButton(onClick = { vm.clearDay(key) }) {
-                    Text("Wyczyść listę na dziś")
-                }
-            }
+        ConfettiOverlay(visible = record.complete, modifier = Modifier.fillMaxSize())
+    }
+}
+
+@Composable
+private fun WeatherHintCard(text: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("🌧️", style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.width(12.dp))
+            Text(text, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
@@ -193,10 +227,15 @@ private fun HeroCard(record: DayRecord, vm: AppViewModel) {
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
+                    val remaining = record.items.filter { !it.checked }
                     Text(
-                        if (record.total - record.done == 0) "Wszystko gotowe!"
-                        else "Zostało ${record.total - record.done} rzeczy",
-                        style = MaterialTheme.typography.bodyMedium,
+                        when {
+                            remaining.isEmpty() -> "Wszystko gotowe! 🎉"
+                            else -> "Zostało: " +
+                                remaining.take(3).joinToString(", ") { it.name } +
+                                if (remaining.size > 3) "…" else ""
+                        },
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
                     )
                 }
@@ -222,6 +261,7 @@ private fun HeroCard(record: DayRecord, vm: AppViewModel) {
 
 @Composable
 private fun SectionCard(
+    group: String,
     title: String,
     subtitle: String,
     items: List<DayItem>,
@@ -241,35 +281,77 @@ private fun SectionCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            items.forEach { item ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { vm.toggleItem(dateKey, item.id) }
-                        .padding(start = 8.dp, end = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = item.checked,
-                        onCheckedChange = { vm.toggleItem(dateKey, item.id) }
-                    )
-                    Text(
-                        item.name,
-                        modifier = Modifier.weight(1f),
-                        textDecoration = if (item.checked) TextDecoration.LineThrough
-                        else TextDecoration.None,
-                        color = if (item.checked) MaterialTheme.colorScheme.onSurfaceVariant
-                        else MaterialTheme.colorScheme.onSurface
-                    )
-                    IconButton(onClick = { vm.removeItemFromDay(dateKey, item.id) }) {
-                        Icon(
-                            Icons.Filled.Close,
-                            contentDescription = "Usuń",
-                            tint = MaterialTheme.colorScheme.outline
-                        )
-                    }
-                }
+            ReorderableColumn(
+                count = items.size,
+                onMove = { from, to -> vm.moveDayItem(dateKey, group, from, to) },
+                rowHeight = 56.dp
+            ) { index, handle ->
+                ItemRow(items[index], dateKey, group, vm, handle)
             }
+        }
+    }
+}
+
+@Composable
+private fun ItemRow(
+    item: DayItem,
+    dateKey: String,
+    group: String,
+    vm: AppViewModel,
+    dragHandle: Modifier
+) {
+    val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
+    val textColor by animateColorAsState(
+        targetValue = if (item.checked) MaterialTheme.colorScheme.onSurfaceVariant
+        else MaterialTheme.colorScheme.onSurface,
+        label = "itemColor"
+    )
+
+    Row(
+        modifier = dragHandle
+            .fillMaxWidth()
+            .clickable {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                vm.toggleItem(dateKey, item.id)
+            }
+            .padding(start = 8.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(
+            checked = item.checked,
+            onCheckedChange = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                vm.toggleItem(dateKey, item.id)
+            }
+        )
+        Text(
+            item.name,
+            modifier = Modifier.weight(1f),
+            color = textColor,
+            textDecoration = if (item.checked) TextDecoration.LineThrough else TextDecoration.None
+        )
+        if (group == GROUP_CUSTOM) {
+            TextButton(
+                onClick = {
+                    vm.addItemPermanently(dateKey, item.name)
+                    Toast.makeText(
+                        context,
+                        "Dodano na stałe do planu tego dnia",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                },
+                contentPadding = PaddingValues(horizontal = 8.dp)
+            ) {
+                Text("Na stałe", style = MaterialTheme.typography.labelSmall)
+            }
+        }
+        IconButton(onClick = { vm.removeItemFromDay(dateKey, item.id) }) {
+            Icon(
+                Icons.Filled.Close,
+                contentDescription = "Usuń",
+                tint = MaterialTheme.colorScheme.outline
+            )
         }
     }
 }

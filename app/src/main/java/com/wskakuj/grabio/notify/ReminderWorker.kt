@@ -15,9 +15,8 @@ import com.wskakuj.grabio.R
 import java.time.LocalDate
 
 /**
- * Pokazuje powiadomienie przypominające o spakowaniu się na trening.
- * Sprawdza dzień tygodnia, żeby nie dzwonić w weekend o porze dni roboczych
- * (i odwrotnie).
+ * Pokazuje powiadomienie przypominające o spakowaniu się na trening,
+ * z przyciskami „Spakowane” i „Otwórz listę”.
  */
 class ReminderWorker(
     appContext: Context,
@@ -38,15 +37,24 @@ class ReminderWorker(
         ) == PackageManager.PERMISSION_GRANTED
         if (!granted) return Result.success()
 
-        val intent = Intent(ctx, MainActivity::class.java)
-        val pending = PendingIntent.getActivity(
-            ctx, 0, intent,
+        val openIntent = Intent(ctx, MainActivity::class.java)
+        val openPending = PendingIntent.getActivity(
+            ctx, 0, openIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
+
+        val packedIntent = Intent(ctx, NotificationActionReceiver::class.java).apply {
+            action = NotificationActionReceiver.ACTION_PACKED
+        }
+        val packedPending = PendingIntent.getBroadcast(
+            ctx, 1, packedIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
         val notification = NotificationCompat.Builder(ctx, Notifications.CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Czas się spakować na trening")
-            .setContentText("Otwórz Grabio i przejdź listę: rzeczy na trening, kłódka, słuchawki, inhalator.")
+            .setContentText("Otwórz Grabio i przejdź listę.")
             .setStyle(
                 NotificationCompat.BigTextStyle().bigText(
                     "Otwórz Grabio i przejdź listę: rzeczy na trening, " +
@@ -55,11 +63,14 @@ class ReminderWorker(
             )
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
-            .setContentIntent(pending)
+            .setContentIntent(openPending)
+            .addAction(0, "Spakowane", packedPending)
+            .addAction(0, "Otwórz listę", openPending)
             .build()
 
         try {
-            NotificationManagerCompat.from(ctx).notify(1001, notification)
+            NotificationManagerCompat.from(ctx)
+                .notify(NotificationActionReceiver.NOTIFICATION_ID, notification)
         } catch (e: SecurityException) {
             // brak zgody — pomijamy
         }

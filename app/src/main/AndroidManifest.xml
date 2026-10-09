@@ -36,6 +36,30 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Widget na ekran główny -->
+        <receiver
+            android:name=".widget.GrabioWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.wskakuj.grabio.action.WIDGET_REFRESH" />
+                <action android:name="com.wskakuj.grabio.action.WIDGET_TOGGLE" />
+                <action android:name="com.wskakuj.grabio.action.WIDGET_PACK_ALL" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info" />
+        </receiver>
+
+        <!-- Przycisk „Spakowane” w powiadomieniu -->
+        <receiver
+            android:name=".notify.NotificationActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.wskakuj.grabio.action.PACKED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

@@ -1,5 +1,6 @@
 package com.wskakuj.grabio.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
@@ -19,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.wskakuj.grabio.AppViewModel
@@ -28,6 +31,9 @@ import com.wskakuj.grabio.data.TRANSPORT_BIKE
 import com.wskakuj.grabio.data.TRANSPORT_CAR
 import java.time.LocalDate
 
+private fun shortDay(dow: Int): String =
+    listOf("Pn", "Wt", "Śr", "Cz", "Pt", "So", "Nd").getOrElse(dow - 1) { "?" }
+
 @Composable
 fun HistoryScreen(vm: AppViewModel, data: AppData) {
     val today = LocalDate.now().toString()
@@ -35,6 +41,7 @@ fun HistoryScreen(vm: AppViewModel, data: AppData) {
     // faktycznie coś spakowano (odhaczono), żeby pusta lista nie zafałszowała liczb.
     val allPast = data.days.filter { it.date < today }.sortedByDescending { it.date }
     val statDays = allPast.filter { it.done > 0 }
+    val byDate = data.days.associateBy { it.date }
 
     Column(
         modifier = Modifier
@@ -67,6 +74,73 @@ fun HistoryScreen(vm: AppViewModel, data: AppData) {
             StatCard("Treningów", "$totalDays", Modifier.weight(1f))
             StatCard("Ukończone", "$completed", Modifier.weight(1f))
             StatCard("Średnio", "${(avg * 100).toInt()}%", Modifier.weight(1f))
+        }
+
+        // --- seria ---
+        var streak = 0
+        var cursor = LocalDate.now()
+        if (byDate[cursor.toString()]?.complete != true) cursor = cursor.minusDays(1)
+        while (true) {
+            val rec = byDate[cursor.toString()]
+            if (rec != null && rec.complete) {
+                streak++
+                cursor = cursor.minusDays(1)
+            } else {
+                break
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+        Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+            Column(Modifier.padding(16.dp)) {
+                Text(
+                    "🔥 Seria: $streak ${if (streak == 1) "dzień" else "dni"} z rzędu",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "Ostatnie 7 dni",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(104.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    (6 downTo 0).forEach { back ->
+                        val date = LocalDate.now().minusDays(back.toLong())
+                        val rec = byDate[date.toString()]
+                        val p = rec?.progress ?: 0f
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Bottom
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height((76f * p).coerceAtLeast(4f).dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(
+                                        if (p >= 1f) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.primaryContainer
+                                    )
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                shortDay(date.dayOfWeek.value),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         val forgotten = statDays
