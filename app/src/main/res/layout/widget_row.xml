@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- UWAGA: bez android:focusable - ListView nie odpala klikniecia elementu,
+     jesli wiersz jest focusable. Klikalnosc zalatwia PendingIntent z fabryki. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_row_root"
     android:layout_width="match_parent"
@@ -11,13 +13,12 @@
     android:paddingEnd="14dp"
     android:paddingTop="8dp"
     android:paddingBottom="8dp"
-    android:clickable="true"
-    android:focusable="true">
+    android:clickable="true">
 
     <ImageView
         android:id="@+id/row_check"
-        android:layout_width="26dp"
-        android:layout_height="26dp"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
         android:src="@drawable/widget_check_off" />
 
     <TextView

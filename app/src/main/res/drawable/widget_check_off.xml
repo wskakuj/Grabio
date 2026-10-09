@@ -1,14 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nieodhaczone: spokojny, zaokrąglony kwadrat z delikatnym obrysem -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="26dp"
-    android:height="26dp"
+    android:width="24dp"
+    android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#1FFFFFFF"
-        android:pathData="M12,2 A10,10 0 1,0 12,22 A10,10 0 1,0 12,2 Z" />
-    <path
         android:fillColor="#00000000"
-        android:strokeColor="#8AFFFFFF"
+        android:strokeColor="#59FFFFFF"
         android:strokeWidth="1.6"
-        android:pathData="M12,3 A9,9 0 1,0 12,21 A9,9 0 1,0 12,3 Z" />
+        android:pathData="M8,3 L16,3 A5,5 0 0 1 21,8 L21,16 A5,5 0 0 1 16,21 L8,21 A5,5 0 0 1 3,16 L3,8 A5,5 0 0 1 8,3 Z" />
 </vector>
