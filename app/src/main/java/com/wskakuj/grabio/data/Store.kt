@@ -29,9 +29,19 @@ class Store(private val context: Context) {
 
     fun save(data: AppData) {
         try {
-            file.writeText(json.encodeToString(AppData.serializer(), data))
+            // Historia nie rośnie w nieskończoność - trzymamy ostatnie MAX_DNI dni.
+            val trimmed = if (data.days.size <= MAX_DNI) {
+                data
+            } else {
+                data.copy(days = data.days.sortedByDescending { it.date }.take(MAX_DNI))
+            }
+            file.writeText(json.encodeToString(AppData.serializer(), trimmed))
         } catch (e: Exception) {
             // Zapis nieudany — stan trzyma się w pamięci.
         }
+    }
+
+    private companion object {
+        const val MAX_DNI = 400
     }
 }

@@ -219,9 +219,10 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
 
 @Composable
 private fun DayRow(d: DayRecord) {
-    val transport = when (d.transport) {
-        TRANSPORT_CAR -> "🚗"
-        TRANSPORT_BIKE -> "🚲"
+    val transport = when {
+        d.restDay -> "🛋️"
+        d.transport == TRANSPORT_CAR -> "🚗"
+        d.transport == TRANSPORT_BIKE -> "🚲"
         else -> "•"
     }
     Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
@@ -246,7 +247,7 @@ private fun DayRow(d: DayRecord) {
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "Spakowane: ${d.done} / ${d.total}",
+                if (d.restDay) "Dzień wolny" else "Spakowane: ${d.done} / ${d.total}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

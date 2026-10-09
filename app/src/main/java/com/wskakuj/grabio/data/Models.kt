@@ -39,7 +39,8 @@ data class DayItem(
 data class DayRecord(
     val date: String,
     val transport: String = "",
-    val items: List<DayItem> = emptyList()
+    val items: List<DayItem> = emptyList(),
+    val restDay: Boolean = false
 ) {
     val total: Int get() = items.size
     val done: Int get() = items.count { it.checked }
@@ -61,6 +62,7 @@ data class AppData(
     val weekendMinute: Int = 0,
     val themeMode: String = THEME_SYSTEM,
     val cityName: String = "",
+    val regionName: String = "",
     val cityLat: Double? = null,
     val cityLon: Double? = null
 )

@@ -43,6 +43,11 @@ class GrabioWidgetFactory(private val context: Context) : RemoteViewsService.Rem
             R.id.row_check,
             if (item.checked) R.drawable.widget_check_on else R.drawable.widget_check_off
         )
+        // odhaczone przygaszone, żeby wzrok od razu łapał, co jeszcze zostało
+        views.setTextColor(
+            R.id.row_text,
+            if (item.checked) 0xFF8A948A.toInt() else 0xFFEDEDE6.toInt()
+        )
         // „doklejka” — widget dopisze do tego EXTRA_ID przy dotknięciu wiersza
         val fillIn = Intent().apply { putExtra(GrabioWidget.EXTRA_ID, item.id) }
         views.setOnClickFillInIntent(R.id.widget_row_root, fillIn)

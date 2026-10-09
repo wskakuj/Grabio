@@ -51,6 +51,9 @@ fun CelebrationOverlay(visible: Boolean, modifier: Modifier = Modifier) {
                 targetValue = 1f,
                 animationSpec = tween(durationMillis = 3200, easing = LinearEasing)
             )
+        } else if (!visible) {
+            // cofnięcie odhaczenia natychmiast sprząta confetti i plakietkę
+            progress.snapTo(0f)
         }
     }
 

@@ -16,9 +16,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -68,15 +70,23 @@ fun weekdayNamePl(dow: Int): String = listOf(
 private fun capitalized(s: String) = s.replaceFirstChar { it.uppercase() }
 
 @Composable
-fun TodayScreen(vm: AppViewModel, data: AppData, weather: Weather.Result?) {
+fun TodayScreen(
+    vm: AppViewModel,
+    data: AppData,
+    weather: Weather.Result?,
+    listState: LazyListState
+) {
     val key = vm.todayKey()
+    val context = LocalContext.current
     val record = data.days.find { it.date == key }
-    // Pytamy o transport tylko raz dziennie - gdy dla danego dnia jeszcze go nie wybrano.
+    val restDay = record?.restDay == true
     var askTransport by remember {
-        mutableStateOf(record == null || record.transport.isEmpty())
+        val r = record
+        mutableStateOf(r == null || (!r.restDay && r.transport.isEmpty()))
     }
+    var editing by remember { mutableStateOf<DayItem?>(null) }
 
-    if (askTransport) {
+    if (askTransport && !restDay) {
         AlertDialog(
             onDismissRequest = {
                 if (record != null && record.transport.isNotEmpty()) askTransport = false
@@ -84,10 +94,19 @@ fun TodayScreen(vm: AppViewModel, data: AppData, weather: Weather.Result?) {
             icon = { Text("🚲", style = MaterialTheme.typography.headlineMedium) },
             title = { Text("Czym jedziesz na trening?") },
             text = {
-                Text(
-                    "Jeśli wybierzesz rower, dopiszę do listy kluczyk od łańcucha " +
-                        "i światełka do roweru."
-                )
+                Column {
+                    Text(
+                        "Jeśli wybierzesz rower, dopiszę do listy kluczyk od łańcucha " +
+                            "i światełka do roweru."
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    TextButton(onClick = {
+                        vm.markRestDay(key)
+                        askTransport = false
+                    }) {
+                        Text("🛋️  Dziś mam wolne")
+                    }
+                }
             },
             confirmButton = {
                 Button(onClick = {
@@ -104,7 +123,7 @@ fun TodayScreen(vm: AppViewModel, data: AppData, weather: Weather.Result?) {
         )
     }
 
-    if (record == null) {
+    if (record == null || restDay) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -113,13 +132,32 @@ fun TodayScreen(vm: AppViewModel, data: AppData, weather: Weather.Result?) {
             WeatherPanel(weather = weather, cityName = data.cityName, bikeNudge = false)
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("🎒", style = MaterialTheme.typography.displaySmall)
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        "Wybierz środek transportu, żeby zobaczyć listę na dziś.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
+                    if (restDay) {
+                        Text("🛋️", style = MaterialTheme.typography.displaySmall)
+                        Spacer(Modifier.height(12.dp))
+                        Text("Dziś masz wolne", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "Miłego odpoczynku!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        TextButton(onClick = {
+                            vm.clearRestDay(key)
+                            askTransport = true
+                        }) {
+                            Text("Wróć do treningu")
+                        }
+                    } else {
+                        Text("🎒", style = MaterialTheme.typography.displaySmall)
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            "Wybierz środek transportu, żeby zobaczyć listę na dziś.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
                 }
             }
         }
@@ -128,11 +166,12 @@ fun TodayScreen(vm: AppViewModel, data: AppData, weather: Weather.Result?) {
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item {
+            item(key = "weather") {
                 WeatherPanel(
                     weather = weather,
                     cityName = data.cityName,
@@ -141,7 +180,7 @@ fun TodayScreen(vm: AppViewModel, data: AppData, weather: Weather.Result?) {
                 )
             }
 
-            item { HeroCard(record, vm) }
+            item(key = "hero") { HeroCard(record, vm) }
 
             val groups = listOf(
                 Triple(GROUP_TRAINING, "🏋️  Trening", "Rzeczy na dzisiejszy trening"),
@@ -153,7 +192,7 @@ fun TodayScreen(vm: AppViewModel, data: AppData, weather: Weather.Result?) {
                 val groupItems = record.items.filter { it.group == group }
                 if (groupItems.isNotEmpty()) {
                     item(key = "h_$group") {
-                        SectionCard(group, label, sub, groupItems, key, vm)
+                        SectionCard(group, label, sub, groupItems, key, vm) { editing = it }
                     }
                 }
             }
@@ -169,6 +208,34 @@ fun TodayScreen(vm: AppViewModel, data: AppData, weather: Weather.Result?) {
         }
 
         CelebrationOverlay(visible = record.complete, modifier = Modifier.fillMaxSize())
+    }
+
+    editing?.let { item ->
+        EditItemDialog(
+            initial = item.name,
+            onSave = {
+                vm.renameDayItem(key, item.id, it)
+                editing = null
+            },
+            onClose = { editing = null },
+            onDelete = {
+                vm.removeItemFromDay(key, item.id)
+                editing = null
+            },
+            onMakePermanent = if (item.group == GROUP_CUSTOM) {
+                {
+                    vm.addItemPermanently(key, item.name)
+                    Toast.makeText(
+                        context,
+                        "Dodano na stałe do planu tego dnia",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    editing = null
+                }
+            } else {
+                null
+            }
+        )
     }
 }
 
@@ -255,7 +322,8 @@ private fun SectionCard(
     subtitle: String,
     items: List<DayItem>,
     dateKey: String,
-    vm: AppViewModel
+    vm: AppViewModel,
+    onEdit: (DayItem) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -275,7 +343,7 @@ private fun SectionCard(
                 onMove = { from, to -> vm.moveDayItem(dateKey, group, from, to) },
                 rowHeight = 56.dp
             ) { index, handle ->
-                ItemRow(items[index], dateKey, group, vm, handle)
+                ItemRow(items[index], dateKey, vm, handle) { onEdit(items[index]) }
             }
         }
     }
@@ -285,12 +353,11 @@ private fun SectionCard(
 private fun ItemRow(
     item: DayItem,
     dateKey: String,
-    group: String,
     vm: AppViewModel,
-    dragHandle: Modifier
+    dragHandle: Modifier,
+    onEdit: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
-    val context = LocalContext.current
     val textColor by animateColorAsState(
         targetValue = if (item.checked) MaterialTheme.colorScheme.onSurfaceVariant
         else MaterialTheme.colorScheme.onSurface,
@@ -320,20 +387,12 @@ private fun ItemRow(
             color = textColor,
             textDecoration = if (item.checked) TextDecoration.LineThrough else TextDecoration.None
         )
-        if (group == GROUP_CUSTOM) {
-            TextButton(
-                onClick = {
-                    vm.addItemPermanently(dateKey, item.name)
-                    Toast.makeText(
-                        context,
-                        "Dodano na stałe do planu tego dnia",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                },
-                contentPadding = PaddingValues(horizontal = 8.dp)
-            ) {
-                Text("Na stałe", style = MaterialTheme.typography.labelSmall)
-            }
+        IconButton(onClick = onEdit) {
+            Icon(
+                Icons.Filled.Edit,
+                contentDescription = "Edytuj",
+                tint = MaterialTheme.colorScheme.outline
+            )
         }
         IconButton(onClick = { vm.removeItemFromDay(dateKey, item.id) }) {
             Icon(

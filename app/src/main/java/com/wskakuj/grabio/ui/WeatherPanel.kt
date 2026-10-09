@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -87,7 +87,7 @@ fun WeatherPanel(
                     }
                 }
                 Icon(
-                    Icons.Filled.KeyboardArrowRight,
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = "Prognoza godzinowa",
                     tint = MaterialTheme.colorScheme.outline
                 )
@@ -99,6 +99,17 @@ fun WeatherPanel(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.outline
                 )
+            }
+            if (weather.warnings.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                weather.warnings.take(2).forEach { w ->
+                    Text(
+                        "⚠️  ${w.event}${if (w.level > 0) " (${w.level}. stopień)" else ""}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
             if (bikeNudge) {
                 Spacer(Modifier.height(6.dp))

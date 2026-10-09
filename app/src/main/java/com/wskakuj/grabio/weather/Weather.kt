@@ -12,13 +12,13 @@ import java.time.LocalDateTime
 import java.util.Locale
 
 /**
- * Pogoda: „teraz” z IMGW (oficjalne pomiary, bez klucza), a prognoza godzinowa
- * z Open-Meteo (bez klucza). Gdy IMGW nie odpowie albo nie ma stacji dla miasta,
- * „teraz” też bierzemy z Open-Meteo.
+ * Pogoda: „teraz” i ostrzeżenia z IMGW (oficjalne dane, bez klucza),
+ * a prognoza godzinowa z Open-Meteo (bez klucza). Gdy IMGW nie odpowie
+ * albo nie ma stacji dla miasta, „teraz” też bierzemy z Open-Meteo.
  */
 object Weather {
 
-    data class Place(val name: String, val lat: Double, val lon: Double)
+    data class Place(val name: String, val region: String, val lat: Double, val lon: Double)
 
     data class Current(
         val source: String,
@@ -33,20 +33,30 @@ object Weather {
 
     data class Hour(val time: String, val tempC: Double, val precipProb: Int, val code: Int)
 
-    data class Result(val current: Current?, val hourly: List<Hour>)
+    data class Warning(val event: String, val level: Int, val from: String, val to: String, val text: String)
 
-    suspend fun load(city: String, lat: Double?, lon: Double?): Result =
+    data class Result(
+        val current: Current?,
+        val hourly: List<Hour>,
+        val warnings: List<Warning>
+    )
+
+    suspend fun load(city: String, region: String, lat: Double?, lon: Double?): Result =
         withContext(Dispatchers.IO) {
-            if (city.isBlank()) return@withContext Result(null, emptyList())
-            val place = if (lat != null && lon != null) Place(city, lat, lon) else geocode(city)
-                ?: return@withContext Result(null, emptyList())
+            if (city.isBlank()) return@withContext Result(null, emptyList(), emptyList())
+            val place = if (lat != null && lon != null) {
+                Place(city, region, lat, lon)
+            } else {
+                geocode(city)
+            } ?: return@withContext Result(null, emptyList(), emptyList())
 
             val current = imgwCurrent(city) ?: openMeteoCurrent(place)
             val hourly = openMeteoHourly(place)
-            Result(current, hourly)
+            val warnings = imgwWarnings(city, region.ifBlank { place.region })
+            Result(current, hourly, warnings)
         }
 
-    /** Nazwa miasta → współrzędne (Open-Meteo geocoding). */
+    /** Nazwa miasta → współrzędne + region (Open-Meteo geocoding). */
     suspend fun geocode(city: String): Place? = withContext(Dispatchers.IO) {
         try {
             val q = URLEncoder.encode(city, "UTF-8")
@@ -57,6 +67,7 @@ object Weather {
             val r = results.getJSONObject(0)
             Place(
                 name = r.optString("name", city),
+                region = r.optString("admin1", ""),
                 lat = r.getDouble("latitude"),
                 lon = r.getDouble("longitude")
             )
@@ -95,6 +106,45 @@ object Weather {
             )
         } catch (e: Exception) {
             null
+        }
+    }
+
+    // --- IMGW: ostrzeżenia meteorologiczne ---
+
+    private fun imgwWarnings(city: String, region: String): List<Warning> {
+        return try {
+            val body = get("https://danepubliczne.imgw.pl/api/data/warningsmeteo")
+                ?: return emptyList()
+            val arr = JSONArray(body)
+            val regionKey = normalize(region)
+                .replace("wojewodztwo", "")
+                .replace("voivodeship", "")
+                .trim()
+            val keys = listOf(normalize(city), regionKey)
+                .filter { it.length >= 4 }
+            if (keys.isEmpty()) return emptyList()
+
+            val out = mutableListOf<Warning>()
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                val hay = normalize(
+                    listOf("tresc", "obszary", "biuro", "komentarz", "nazwa_zdarzenia")
+                        .joinToString(" ") { o.opt(it)?.toString().orEmpty() }
+                )
+                if (keys.any { hay.contains(it) }) {
+                    out += Warning(
+                        event = o.optString("nazwa_zdarzenia").ifBlank { "ostrzeżenie" },
+                        level = o.optString("stopien").toIntOrNull() ?: 0,
+                        from = o.optString("obowiazuje_od"),
+                        to = o.optString("obowiazuje_do"),
+                        text = o.optString("tresc")
+                    )
+                }
+                if (out.size >= 3) break
+            }
+            out
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 

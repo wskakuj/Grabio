@@ -162,6 +162,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         update { d -> d.copy(days = d.days.filterNot { it.date == date }) }
     }
 
+    /** Oznacza dzień jako wolny (bez treningu). */
+    fun markRestDay(date: String = todayKey()) {
+        update { d ->
+            d.copy(
+                days = d.days.filterNot { it.date == date } +
+                    DayRecord(date = date, restDay = true, items = emptyList())
+            )
+        }
+    }
+
+    fun clearRestDay(date: String = todayKey()) {
+        update { d -> d.copy(days = d.days.filterNot { it.date == date }) }
+    }
+
+    /** Zmiana nazwy pozycji na liście dnia. */
+    fun renameDayItem(date: String, itemId: String, newName: String) {
+        val trimmed = newName.trim()
+        if (trimmed.isEmpty()) return
+        update { d ->
+            d.copy(days = d.days.map { day ->
+                if (day.date != date) day
+                else day.copy(items = day.items.map {
+                    if (it.id == itemId) it.copy(name = trimmed) else it
+                })
+            })
+        }
+    }
+
     /** Zmiana kolejności w obrębie grupy na liście dnia. */
     fun moveDayItem(date: String, group: String, from: Int, to: Int) {
         update { d ->
@@ -200,6 +228,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun renameWeekItem(day: Int, id: String, newName: String) {
+        val trimmed = newName.trim()
+        if (trimmed.isEmpty()) return
+        update { d ->
+            d.copy(weekPlan = d.weekPlan + (day to d.weekPlan[day].orEmpty().map {
+                if (it.id == id) it.copy(name = trimmed) else it
+            }))
+        }
+    }
+
     fun moveWeekItem(day: Int, from: Int, to: Int) {
         update { d ->
             val list = d.weekPlan[day].orEmpty().toMutableList()
@@ -225,6 +263,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         update { d -> d.copy(essentials = d.essentials.filterNot { it.id == id }) }
     }
 
+    fun renameEssential(id: String, newName: String) {
+        val trimmed = newName.trim()
+        if (trimmed.isEmpty()) return
+        update { d ->
+            d.copy(essentials = d.essentials.map { if (it.id == id) it.copy(name = trimmed) else it })
+        }
+    }
+
     fun moveEssential(from: Int, to: Int) {
         update { d ->
             val list = d.essentials.toMutableList()
@@ -245,6 +291,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun removeBikeExtra(id: String) {
         update { d -> d.copy(bikeExtras = d.bikeExtras.filterNot { it.id == id }) }
+    }
+
+    fun renameBikeExtra(id: String, newName: String) {
+        val trimmed = newName.trim()
+        if (trimmed.isEmpty()) return
+        update { d ->
+            d.copy(bikeExtras = d.bikeExtras.map { if (it.id == id) it.copy(name = trimmed) else it })
+        }
     }
 
     fun moveBikeExtra(from: Int, to: Int) {
@@ -269,13 +323,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setCity(name: String) {
         val trimmed = name.trim()
-        update { it.copy(cityName = trimmed, cityLat = null, cityLon = null) }
+        update { it.copy(cityName = trimmed, regionName = "", cityLat = null, cityLon = null) }
         _weather.value = null
         if (trimmed.isEmpty()) return
         viewModelScope.launch {
             val place = Weather.geocode(trimmed)
             if (place != null) {
-                update { it.copy(cityName = place.name, cityLat = place.lat, cityLon = place.lon) }
+                update {
+                    it.copy(
+                        cityName = place.name,
+                        regionName = place.region,
+                        cityLat = place.lat,
+                        cityLon = place.lon
+                    )
+                }
             }
             refreshWeather()
         }
@@ -288,7 +349,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         viewModelScope.launch {
-            _weather.value = Weather.load(d.cityName, d.cityLat, d.cityLon)
+            _weather.value = Weather.load(d.cityName, d.regionName, d.cityLat, d.cityLon)
         }
     }
 

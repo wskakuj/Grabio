@@ -77,6 +77,7 @@ fun WeekPlanScreen(vm: AppViewModel, data: AppData) {
                 subtitle = "Przypominane każdego dnia.",
                 items = data.essentials,
                 onRemove = { vm.removeEssential(it) },
+                onRename = { id, name -> vm.renameEssential(id, name) },
                 onAdd = { vm.addEssential(it) },
                 onMove = { f, t -> vm.moveEssential(f, t) },
                 addLabel = "Dodaj codzienny dodatek"
@@ -88,6 +89,7 @@ fun WeekPlanScreen(vm: AppViewModel, data: AppData) {
                 subtitle = "Dopisane, gdy jedziesz rowerem.",
                 items = data.bikeExtras,
                 onRemove = { vm.removeBikeExtra(it) },
+                onRename = { id, name -> vm.renameBikeExtra(id, name) },
                 onAdd = { vm.addBikeExtra(it) },
                 onMove = { f, t -> vm.moveBikeExtra(f, t) },
                 addLabel = "Dodaj rowerowy dodatek"
@@ -150,11 +152,14 @@ private fun ListCard(
     subtitle: String,
     items: List<ChecklistItem>,
     onRemove: (String) -> Unit,
+    onRename: (String, String) -> Unit,
     onAdd: (String) -> Unit,
     onMove: (Int, Int) -> Unit,
     addLabel: String
 ) {
     var text by remember { mutableStateOf("") }
+    var editing by remember { mutableStateOf<ChecklistItem?>(null) }
+
     Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
         Column(Modifier.padding(vertical = 8.dp)) {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -170,14 +175,22 @@ private fun ListCard(
                 onMove = onMove,
                 rowHeight = 48.dp
             ) { index, handle ->
+                val item = items[index]
                 Row(
                     modifier = handle
                         .fillMaxWidth()
                         .padding(start = 16.dp, end = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(items[index].name, modifier = Modifier.weight(1f))
-                    IconButton(onClick = { onRemove(items[index].id) }) {
+                    Text(item.name, modifier = Modifier.weight(1f))
+                    IconButton(onClick = { editing = item }) {
+                        Icon(
+                            Icons.Filled.Edit,
+                            contentDescription = "Edytuj",
+                            tint = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                    IconButton(onClick = { onRemove(item.id) }) {
                         Icon(
                             Icons.Filled.Close,
                             contentDescription = "Usuń",
@@ -209,6 +222,21 @@ private fun ListCard(
             }
         }
     }
+
+    editing?.let { item ->
+        EditItemDialog(
+            initial = item.name,
+            onSave = {
+                onRename(item.id, it)
+                editing = null
+            },
+            onClose = { editing = null },
+            onDelete = {
+                onRemove(item.id)
+                editing = null
+            }
+        )
+    }
 }
 
 @Composable
@@ -219,6 +247,8 @@ private fun DayEditor(
     onClose: () -> Unit
 ) {
     var newItem by remember { mutableStateOf("") }
+    var editing by remember { mutableStateOf<ChecklistItem?>(null) }
+
     AlertDialog(
         onDismissRequest = onClose,
         title = { Text("Plan — ${weekdayNamePl(day)}") },
@@ -239,12 +269,20 @@ private fun DayEditor(
                         onMove = { f, t -> vm.moveWeekItem(day, f, t) },
                         rowHeight = 48.dp
                     ) { index, handle ->
+                        val item = items[index]
                         Row(
                             modifier = handle.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(items[index].name, modifier = Modifier.weight(1f))
-                            IconButton(onClick = { vm.removeWeekItem(day, items[index].id) }) {
+                            Text(item.name, modifier = Modifier.weight(1f))
+                            IconButton(onClick = { editing = item }) {
+                                Icon(
+                                    Icons.Filled.Edit,
+                                    contentDescription = "Edytuj",
+                                    tint = MaterialTheme.colorScheme.outline
+                                )
+                            }
+                            IconButton(onClick = { vm.removeWeekItem(day, item.id) }) {
                                 Icon(Icons.Filled.Close, contentDescription = "Usuń")
                             }
                         }
@@ -274,4 +312,19 @@ private fun DayEditor(
             TextButton(onClick = onClose) { Text("Gotowe") }
         }
     )
+
+    editing?.let { item ->
+        EditItemDialog(
+            initial = item.name,
+            onSave = {
+                vm.renameWeekItem(day, item.id, it)
+                editing = null
+            },
+            onClose = { editing = null },
+            onDelete = {
+                vm.removeWeekItem(day, item.id)
+                editing = null
+            }
+        )
+    }
 }
