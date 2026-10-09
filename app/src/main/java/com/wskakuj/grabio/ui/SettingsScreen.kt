@@ -193,12 +193,7 @@ fun SettingsScreen(vm: AppViewModel, data: AppData) {
             }
         }
 
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "Grabio — lista pakowania na trening.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        GrabioCredit()
     }
 }
 

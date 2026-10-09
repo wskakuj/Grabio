@@ -41,9 +41,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val _updateState = MutableStateFlow<UpdateState>(UpdateState.Idle)
     val updateState: StateFlow<UpdateState> = _updateState.asStateFlow()
 
-    /** Podpowiedź pogodowa (np. gdy w dzień rowerowy ma padać). */
-    private val _weatherHint = MutableStateFlow<String?>(null)
-    val weatherHint: StateFlow<String?> = _weatherHint.asStateFlow()
+    /** Dane pogodowe: „teraz” (IMGW / Open-Meteo) + prognoza godzinowa. */
+    private val _weather = MutableStateFlow<Weather.Result?>(null)
+    val weather: StateFlow<Weather.Result?> = _weather.asStateFlow()
 
     private fun update(block: (AppData) -> AppData) {
         val newData = block(_data.value)
@@ -88,7 +88,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val custom = existing?.items?.filter { it.group == GROUP_CUSTOM } ?: emptyList()
         val record = DayRecord(date = key, transport = mode, items = fresh + custom)
         update { d -> d.copy(days = d.days.filterNot { it.date == key } + record) }
-        refreshWeather()
     }
 
     fun toggleItem(date: String, itemId: String) {
@@ -161,7 +160,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearDay(date: String) {
         update { d -> d.copy(days = d.days.filterNot { it.date == date }) }
-        _weatherHint.value = null
     }
 
     /** Zmiana kolejności w obrębie grupy na liście dnia. */
@@ -272,33 +270,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setCity(name: String) {
         val trimmed = name.trim()
         update { it.copy(cityName = trimmed, cityLat = null, cityLon = null) }
-        _weatherHint.value = null
+        _weather.value = null
         if (trimmed.isEmpty()) return
         viewModelScope.launch {
             val place = Weather.geocode(trimmed)
             if (place != null) {
                 update { it.copy(cityName = place.name, cityLat = place.lat, cityLon = place.lon) }
-                refreshWeather()
             }
+            refreshWeather()
         }
     }
 
     fun refreshWeather() {
         val d = _data.value
-        val record = todayRecord()
-        val lat = d.cityLat
-        val lon = d.cityLon
-        if (record == null || record.transport != TRANSPORT_BIKE || lat == null || lon == null) {
-            _weatherHint.value = null
+        if (d.cityName.isBlank()) {
+            _weather.value = null
             return
         }
         viewModelScope.launch {
-            val p = Weather.precipitationToday(lat, lon)
-            _weatherHint.value = if (p != null && p >= 40) {
-                "Dziś jedziesz rowerem, a prognoza daje $p% szans na opady — może jednak samochód?"
-            } else {
-                null
-            }
+            _weather.value = Weather.load(d.cityName, d.cityLat, d.cityLon)
         }
     }
 

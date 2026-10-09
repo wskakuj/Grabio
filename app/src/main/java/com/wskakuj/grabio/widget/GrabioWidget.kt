@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.view.View
 import android.widget.RemoteViews
 import com.wskakuj.grabio.MainActivity
@@ -14,13 +15,14 @@ import com.wskakuj.grabio.data.Store
 import java.time.LocalDate
 
 /**
- * Widget na ekran główny: dzisiejsza lista z odhaczaniem.
- * Przytrzymanie wiersza w aplikacji zmienia kolejność, tu można odhaczać.
+ * Widget na ekran główny: nagłówek z dniem i postępem oraz przewijalna
+ * lista rzeczy na dziś. Dotknięcie wiersza odhacza pozycję.
  */
 class GrabioWidget : AppWidgetProvider() {
 
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
         ids.forEach { manager.updateAppWidget(it, build(context)) }
+        manager.notifyAppWidgetViewDataChanged(ids, R.id.widget_list)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -30,12 +32,12 @@ class GrabioWidget : AppWidgetProvider() {
             ACTION_TOGGLE -> {
                 val itemId = intent.getStringExtra(EXTRA_ID)
                 if (itemId != null) {
-                    setChecked(context, itemId, null)
+                    toggle(context, itemId)
                     refreshAll(context)
                 }
             }
             ACTION_PACK_ALL -> {
-                setChecked(context, null, true)
+                packAll(context)
                 refreshAll(context)
             }
         }
@@ -47,10 +49,10 @@ class GrabioWidget : AppWidgetProvider() {
         if (ids.isEmpty()) return
         val views = build(context)
         ids.forEach { manager.updateAppWidget(it, views) }
+        manager.notifyAppWidgetViewDataChanged(ids, R.id.widget_list)
     }
 
-    /** checked == null → przełącz; checked == true/false → ustaw. */
-    private fun setChecked(context: Context, itemId: String?, checked: Boolean?) {
+    private fun toggle(context: Context, itemId: String) {
         val store = Store(context)
         val data = store.load()
         val key = LocalDate.now().toString()
@@ -58,34 +60,42 @@ class GrabioWidget : AppWidgetProvider() {
             if (day.date != key) {
                 day
             } else {
-                day.copy(items = day.items.map { item ->
-                    when {
-                        itemId != null && item.id == itemId -> item.copy(checked = !item.checked)
-                        itemId == null && checked != null -> item.copy(checked = checked)
-                        else -> item
-                    }
+                day.copy(items = day.items.map {
+                    if (it.id == itemId) it.copy(checked = !it.checked) else it
                 })
             }
         }
         store.save(data.copy(days = newDays))
     }
 
+    private fun packAll(context: Context) {
+        val store = Store(context)
+        val data = store.load()
+        val key = LocalDate.now().toString()
+        val newDays = data.days.map { day ->
+            if (day.date != key) day
+            else day.copy(items = day.items.map { it.copy(checked = true) })
+        }
+        store.save(data.copy(days = newDays))
+    }
+
     private fun build(context: Context): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_grabio)
-        val data = Store(context).load()
+        val appData = Store(context).load()
         val key = LocalDate.now().toString()
-        val record = data.days.find { it.date == key }
+        val record = appData.days.find { it.date == key }
+
+        val dayName = listOf(
+            "Poniedziałek", "Wtorek", "Środa", "Czwartek",
+            "Piątek", "Sobota", "Niedziela"
+        ).getOrElse(LocalDate.now().dayOfWeek.value - 1) { "" }
+        views.setTextViewText(R.id.widget_day, dayName)
 
         if (record == null || record.items.isEmpty()) {
-            views.setTextViewText(R.id.widget_title, "Grabio")
-            views.setTextViewText(R.id.widget_sub, "Brak listy na dziś")
+            views.setTextViewText(R.id.widget_count, "—")
             views.setViewVisibility(R.id.widget_progress, View.GONE)
-            for (i in 0 until MAX_ROWS) {
-                views.setViewVisibility(ROW_IDS[i], View.GONE)
-            }
         } else {
-            views.setTextViewText(R.id.widget_title, "Dziś")
-            views.setTextViewText(R.id.widget_sub, "${record.done}/${record.total} spakowane")
+            views.setTextViewText(R.id.widget_count, "${record.done}/${record.total}")
             views.setViewVisibility(R.id.widget_progress, View.VISIBLE)
             views.setProgressBar(
                 R.id.widget_progress,
@@ -93,38 +103,27 @@ class GrabioWidget : AppWidgetProvider() {
                 record.done,
                 false
             )
-            for (i in 0 until MAX_ROWS) {
-                if (i < record.items.size) {
-                    val item = record.items[i]
-                    views.setViewVisibility(ROW_IDS[i], View.VISIBLE)
-                    views.setTextViewText(TEXT_IDS[i], item.name)
-                    views.setImageViewResource(
-                        CHECK_IDS[i],
-                        if (item.checked) R.drawable.widget_check_on
-                        else R.drawable.widget_check_off
-                    )
-                    val toggle = Intent(context, GrabioWidget::class.java).apply {
-                        action = ACTION_TOGGLE
-                        putExtra(EXTRA_ID, item.id)
-                    }
-                    val pi = PendingIntent.getBroadcast(
-                        context, i, toggle,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                    )
-                    views.setOnClickPendingIntent(ROW_IDS[i], pi)
-                } else {
-                    views.setViewVisibility(ROW_IDS[i], View.GONE)
-                }
-            }
         }
 
+        // przewijalna lista
+        val serviceIntent = Intent(context, GrabioWidgetService::class.java).apply {
+            setData(Uri.parse(toUri(Intent.URI_INTENT_SCHEME)))
+        }
+        views.setRemoteAdapter(R.id.widget_list, serviceIntent)
+
+        val template = Intent(context, GrabioWidget::class.java).apply { action = ACTION_TOGGLE }
+        val templatePending = PendingIntent.getBroadcast(
+            context, 50, template,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+        )
+        views.setPendingIntentTemplate(R.id.widget_list, templatePending)
+
         val open = Intent(context, MainActivity::class.java)
-        val openPi = PendingIntent.getActivity(
+        val openPending = PendingIntent.getActivity(
             context, 100, open,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        views.setOnClickPendingIntent(R.id.widget_title, openPi)
-        views.setOnClickPendingIntent(R.id.widget_sub, openPi)
+        views.setOnClickPendingIntent(R.id.widget_header, openPending)
 
         return views
     }
@@ -134,19 +133,5 @@ class GrabioWidget : AppWidgetProvider() {
         const val ACTION_TOGGLE = "com.wskakuj.grabio.action.WIDGET_TOGGLE"
         const val ACTION_PACK_ALL = "com.wskakuj.grabio.action.WIDGET_PACK_ALL"
         const val EXTRA_ID = "item_id"
-        const val MAX_ROWS = 8
-
-        private val ROW_IDS = intArrayOf(
-            R.id.row1, R.id.row2, R.id.row3, R.id.row4,
-            R.id.row5, R.id.row6, R.id.row7, R.id.row8
-        )
-        private val TEXT_IDS = intArrayOf(
-            R.id.text1, R.id.text2, R.id.text3, R.id.text4,
-            R.id.text5, R.id.text6, R.id.text7, R.id.text8
-        )
-        private val CHECK_IDS = intArrayOf(
-            R.id.check1, R.id.check2, R.id.check3, R.id.check4,
-            R.id.check5, R.id.check6, R.id.check7, R.id.check8
-        )
     }
 }

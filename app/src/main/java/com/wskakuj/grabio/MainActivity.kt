@@ -98,7 +98,7 @@ private data class Tab(val label: String, val icon: ImageVector)
 @Composable
 private fun AppRoot(vm: AppViewModel, data: AppData) {
     val updateState by vm.updateState.collectAsState()
-    val weatherHint by vm.weatherHint.collectAsState()
+    val weather by vm.weather.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
 
@@ -171,7 +171,7 @@ private fun AppRoot(vm: AppViewModel, data: AppData) {
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (selectedTab) {
-                0 -> TodayScreen(vm, data, weatherHint)
+                0 -> TodayScreen(vm, data, weather)
                 1 -> WeekPlanScreen(vm, data)
                 2 -> HistoryScreen(vm, data)
                 else -> SettingsScreen(vm, data)

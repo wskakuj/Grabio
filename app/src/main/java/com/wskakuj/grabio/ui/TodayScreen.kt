@@ -59,6 +59,7 @@ import com.wskakuj.grabio.data.GROUP_ESSENTIAL
 import com.wskakuj.grabio.data.GROUP_TRAINING
 import com.wskakuj.grabio.data.TRANSPORT_BIKE
 import com.wskakuj.grabio.data.TRANSPORT_CAR
+import com.wskakuj.grabio.weather.Weather
 
 fun weekdayNamePl(dow: Int): String = listOf(
     "poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota", "niedziela"
@@ -67,7 +68,7 @@ fun weekdayNamePl(dow: Int): String = listOf(
 private fun capitalized(s: String) = s.replaceFirstChar { it.uppercase() }
 
 @Composable
-fun TodayScreen(vm: AppViewModel, data: AppData, weatherHint: String?) {
+fun TodayScreen(vm: AppViewModel, data: AppData, weather: Weather.Result?) {
     val key = vm.todayKey()
     val record = data.days.find { it.date == key }
     // Pytamy o transport tylko raz dziennie - gdy dla danego dnia jeszcze go nie wybrano.
@@ -104,18 +105,22 @@ fun TodayScreen(vm: AppViewModel, data: AppData, weatherHint: String?) {
     }
 
     if (record == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(32.dp)
-            ) {
-                Text("🎒", style = MaterialTheme.typography.displaySmall)
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    "Wybierz środek transportu, żeby zobaczyć listę na dziś.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            WeatherPanel(weather = weather, cityName = data.cityName, bikeNudge = false)
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("🎒", style = MaterialTheme.typography.displaySmall)
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "Wybierz środek transportu, żeby zobaczyć listę na dziś.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
             }
         }
         return
@@ -127,11 +132,16 @@ fun TodayScreen(vm: AppViewModel, data: AppData, weatherHint: String?) {
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item { HeroCard(record, vm) }
-
-            if (weatherHint != null) {
-                item { WeatherHintCard(weatherHint) }
+            item {
+                WeatherPanel(
+                    weather = weather,
+                    cityName = data.cityName,
+                    bikeNudge = record.transport == TRANSPORT_BIKE &&
+                        (weather?.hourly?.take(8)?.maxOfOrNull { it.precipProb } ?: 0) >= 40
+                )
             }
+
+            item { HeroCard(record, vm) }
 
             val groups = listOf(
                 Triple(GROUP_TRAINING, "🏋️  Trening", "Rzeczy na dzisiejszy trening"),
@@ -158,28 +168,7 @@ fun TodayScreen(vm: AppViewModel, data: AppData, weatherHint: String?) {
             }
         }
 
-        ConfettiOverlay(visible = record.complete, modifier = Modifier.fillMaxSize())
-    }
-}
-
-@Composable
-private fun WeatherHintCard(text: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-        )
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("🌧️", style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.width(12.dp))
-            Text(text, style = MaterialTheme.typography.bodyMedium)
-        }
+        CelebrationOverlay(visible = record.complete, modifier = Modifier.fillMaxSize())
     }
 }
 

@@ -37,6 +37,12 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- Usługa listy widgetu (przewijanie) -->
+        <service
+            android:name=".widget.GrabioWidgetService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false" />
+
         <!-- Widget na ekran główny -->
         <receiver
             android:name=".widget.GrabioWidget"

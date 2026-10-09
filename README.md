@@ -8,6 +8,9 @@ na trening danego dnia, z planem tygodnia, przypomnieniami i auto-aktualizacją 
 - **Dziś** — przed pokazaniem listy pyta, czy jedziesz **samochodem czy rowerem**.
   Przy rowerze dopisuje kluczyk od łańcucha i światełka. Lista jest pogrupowana:
   *Trening* (rzeczy na dany dzień), *Codziennie*, *Rower*, *Własne*.
+- **Pogoda** — panel na górze „Dziś”: „teraz” z **IMGW** (oficjalne pomiary, bez klucza),
+  a prognoza godzinowa z Open-Meteo. Kliknięcie panelu pokazuje kolejne godziny.
+- **Widget** — przewijalna lista na dziś na ekranie głównym, z odhaczaniem bez otwierania aplikacji.
 - **Plan** — plan tygodnia (pon–nd) oraz dodatki *codzienne* (kłódka do szafki,
   bateria słuchawek, inhalator, miętówki/gumy) i *rowerowe*.
 - **Historia** — zapis minionych dni, procent spakowania, najczęściej zapominane rzeczy.
