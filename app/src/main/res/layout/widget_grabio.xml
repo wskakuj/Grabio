@@ -13,13 +13,24 @@
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
+        <!-- Wordmark jak w aplikacji: "Grab" + zielone "io" -->
         <TextView
             android:id="@+id/widget_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Grabio"
+            android:text="Grab"
             android:textColor="#FFFFFF"
-            android:textStyle="bold"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.06"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/widget_title_io"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="io"
+            android:textColor="#A3FF12"
+            android:fontFamily="sans-serif-black"
             android:letterSpacing="0.06"
             android:textSize="18sp" />
 
