@@ -26,10 +26,15 @@ import com.wskakuj.grabio.data.AppData
 import com.wskakuj.grabio.data.DayRecord
 import com.wskakuj.grabio.data.TRANSPORT_BIKE
 import com.wskakuj.grabio.data.TRANSPORT_CAR
+import java.time.LocalDate
 
 @Composable
 fun HistoryScreen(vm: AppViewModel, data: AppData) {
-    val days = data.days.sortedByDescending { it.date }
+    val today = LocalDate.now().toString()
+    // Historia pokazuje tylko minione dni; do statystyk liczymy te, w których
+    // faktycznie coś spakowano (odhaczono), żeby pusta lista nie zafałszowała liczb.
+    val allPast = data.days.filter { it.date < today }.sortedByDescending { it.date }
+    val statDays = allPast.filter { it.done > 0 }
 
     Column(
         modifier = Modifier
@@ -43,10 +48,10 @@ fun HistoryScreen(vm: AppViewModel, data: AppData) {
         )
         Spacer(Modifier.height(12.dp))
 
-        if (days.isEmpty()) {
+        if (allPast.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    "Brak zapisanych dni.\nZacznij od zakładki Dziś.",
+                    "Brak minionych dni.\nStatystyki pojawią się po pierwszym treningu.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -54,10 +59,9 @@ fun HistoryScreen(vm: AppViewModel, data: AppData) {
             return
         }
 
-        val totalDays = days.size
-        val completed = days.count { it.total > 0 && it.done == it.total }
-        val withItems = days.filter { it.total > 0 }
-        val avg = if (withItems.isEmpty()) 0.0 else withItems.map { it.progress.toDouble() }.average()
+        val totalDays = statDays.size
+        val completed = statDays.count { it.total > 0 && it.done == it.total }
+        val avg = if (statDays.isEmpty()) 0.0 else statDays.map { it.progress.toDouble() }.average()
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             StatCard("Treningów", "$totalDays", Modifier.weight(1f))
@@ -65,7 +69,7 @@ fun HistoryScreen(vm: AppViewModel, data: AppData) {
             StatCard("Średnio", "${(avg * 100).toInt()}%", Modifier.weight(1f))
         }
 
-        val forgotten = days
+        val forgotten = statDays
             .flatMap { day -> day.items.filter { !it.checked }.map { it.name } }
             .groupingBy { it }
             .eachCount()
@@ -106,7 +110,7 @@ fun HistoryScreen(vm: AppViewModel, data: AppData) {
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(days, key = { it.date }) { d -> DayRow(d) }
+            items(allPast, key = { it.date }) { d -> DayRow(d) }
         }
     }
 }
