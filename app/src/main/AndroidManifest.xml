@@ -52,6 +52,7 @@
                 <action android:name="com.wskakuj.grabio.action.WIDGET_REFRESH" />
                 <action android:name="com.wskakuj.grabio.action.WIDGET_TOGGLE" />
                 <action android:name="com.wskakuj.grabio.action.WIDGET_PACK_ALL" />
+                <action android:name="com.wskakuj.grabio.action.WIDGET_SET_TRANSPORT" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

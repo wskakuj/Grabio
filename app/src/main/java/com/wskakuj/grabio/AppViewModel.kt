@@ -13,7 +13,9 @@ import com.wskakuj.grabio.data.GROUP_ESSENTIAL
 import com.wskakuj.grabio.data.GROUP_TRAINING
 import com.wskakuj.grabio.data.Store
 import com.wskakuj.grabio.data.TRANSPORT_BIKE
+import com.wskakuj.grabio.data.buildDayItems
 import com.wskakuj.grabio.data.defaultBag
+import com.wskakuj.grabio.data.newItemId
 import com.wskakuj.grabio.notify.ProgressNotifier
 import com.wskakuj.grabio.notify.ReminderScheduler
 import com.wskakuj.grabio.update.UpdateManager
@@ -23,7 +25,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.util.UUID
 
 /** Stan auto-aktualizacji pokazywany w interfejsie. */
 sealed interface UpdateState {
@@ -59,7 +60,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         ProgressNotifier.sync(getApplication(), newData.days.find { it.date == todayKey() })
     }
 
-    fun newId(): String = UUID.randomUUID().toString()
+    fun newId(): String = newItemId()
     fun todayKey(): String = LocalDate.now().toString()
     fun weekday(): Int = LocalDate.now().dayOfWeek.value
     fun todayRecord(): DayRecord? = _data.value.days.find { it.date == todayKey() }
@@ -113,21 +114,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // --- Lista dnia ---
 
-    private fun buildItems(weekday: Int, transport: String): List<DayItem> {
-        val out = mutableListOf<DayItem>()
-        _data.value.weekPlan[weekday].orEmpty().forEach {
-            out += DayItem(newId(), it.name, group = GROUP_TRAINING)
-        }
-        _data.value.essentials.forEach {
-            out += DayItem(newId(), it.name, group = GROUP_ESSENTIAL)
-        }
-        if (transport == TRANSPORT_BIKE) {
-            _data.value.bikeExtras.forEach {
-                out += DayItem(newId(), it.name, group = GROUP_BIKE)
-            }
-        }
-        return out
-    }
+    private fun buildItems(weekday: Int, transport: String): List<DayItem> =
+        buildDayItems(_data.value, weekday, transport)
 
     fun setTransport(mode: String) {
         val key = todayKey()

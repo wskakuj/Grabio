@@ -1,3 +1,3 @@
-# Co nowego w Grabio v1.0.15
+# Co nowego w Grabio v1.0.16
 
 - 
