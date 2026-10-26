@@ -1,4 +1,4 @@
-# Co nowego w Grabio v1.0.18
+# Co nowego w Grabio v1.0.19
 
-* gpt Przypomnienia fix
+* gpt fix Synchronizacja list według ID
 

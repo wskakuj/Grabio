@@ -90,25 +90,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val record = d.days.find { it.date == key }
             if (record == null || record.restDay) return@update d
 
-            val checkedByName = record.items.associate { it.name to it.checked }
             val custom = record.items.filter { it.group == GROUP_CUSTOM }
-
-            val fresh = mutableListOf<DayItem>()
-            d.weekPlan[weekday].orEmpty().forEach {
-                fresh += DayItem(newId(), it.name, group = GROUP_TRAINING)
-            }
-            d.essentials.forEach {
-                fresh += DayItem(newId(), it.name, group = GROUP_ESSENTIAL)
-            }
-            if (record.transport == TRANSPORT_BIKE) {
-                d.bikeExtras.forEach {
-                    fresh += DayItem(newId(), it.name, group = GROUP_BIKE)
-                }
-            }
-            val merged = fresh.map { it.copy(checked = checkedByName[it.name] ?: false) }
+            val merged = buildDayItems(
+                data = d,
+                weekday = weekday,
+                transport = record.transport,
+                custom = custom,
+                previousItems = record.items
+            )
             d.copy(days = d.days.map {
                 if (it.date == key) {
-                    it.copy(items = merged + custom, bag = it.bag.ifEmpty { defaultBag(weekday) })
+                    it.copy(items = merged, bag = it.bag.ifEmpty { defaultBag(weekday) })
                 } else {
                     it
                 }
@@ -133,11 +125,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setTransport(mode: String) {
         val key = todayKey()
         val existing = todayRecord()
-        val prev = existing?.items?.associate { it.name to it.checked } ?: emptyMap()
-        val fresh = buildItems(weekday(), mode).map { it.copy(checked = prev[it.name] ?: false) }
         val custom = existing?.items?.filter { it.group == GROUP_CUSTOM } ?: emptyList()
+        val fresh = buildDayItems(
+            data = _data.value,
+            weekday = weekday(),
+            transport = mode,
+            custom = custom,
+            previousItems = existing?.items.orEmpty()
+        )
         val bag = existing?.bag?.ifEmpty { defaultBag(weekday()) } ?: defaultBag(weekday())
-        val record = DayRecord(date = key, transport = mode, bag = bag, items = fresh + custom)
+        val record = DayRecord(date = key, transport = mode, bag = bag, items = fresh)
         update { d -> d.copy(days = d.days.filterNot { it.date == key } + record) }
     }
 

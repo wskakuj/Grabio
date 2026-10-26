@@ -2,38 +2,58 @@ package com.wskakuj.grabio.data
 
 import java.util.UUID
 
-/** Nowy, unikalny identyfikator pozycji. */
+/** Nowy, unikalny identyfikator pozycji dodawanych przez użytkownika. */
 fun newItemId(): String = UUID.randomUUID().toString()
 
 /**
- * Buduje listę rzeczy na dany dzień: plan tygodnia + codzienne dodatki
- * (+ dodatki rowerowe, gdy jedziesz rowerem) + własne pozycje.
+ * Tworzy listę dnia ze stałymi ID odpowiadającymi elementom planu.
  *
- * Trzymamy to w jednym miejscu, żeby aplikacja i widget budowały listę
- * dokładnie tak samo — inaczej wybór transportu w widgecie dawałby
- * inną listę niż wybór w aplikacji.
+ * Podczas pierwszej przebudowy starszej listy dopasowuje zapisane pozycje
+ * po nazwie I grupie, jednokrotnie (bez mieszania dwóch duplikatów).
+ * Przy kolejnych przebudowach priorytet ma już trwałe ID.
  *
- * @param checkedByName odhaczenia z poprzedniej wersji listy (zachowujemy po nazwie)
+ * checkedByName pozostaje dla zgodności ze starszymi wywołaniami (np. widget).
  */
 fun buildDayItems(
     data: AppData,
     weekday: Int,
     transport: String,
     custom: List<DayItem> = emptyList(),
-    checkedByName: Map<String, Boolean> = emptyMap()
+    checkedByName: Map<String, Boolean> = emptyMap(),
+    previousItems: List<DayItem> = emptyList()
 ): List<DayItem> {
-    val out = mutableListOf<DayItem>()
+    val templates = mutableListOf<DayItem>()
     data.weekPlan[weekday].orEmpty().forEach {
-        out += DayItem(newItemId(), it.name, group = GROUP_TRAINING)
+        templates += DayItem(it.id, it.name, group = GROUP_TRAINING)
     }
     data.essentials.forEach {
-        out += DayItem(newItemId(), it.name, group = GROUP_ESSENTIAL)
+        templates += DayItem(it.id, it.name, group = GROUP_ESSENTIAL)
     }
     if (transport == TRANSPORT_BIKE) {
         data.bikeExtras.forEach {
-            out += DayItem(newItemId(), it.name, group = GROUP_BIKE)
+            templates += DayItem(it.id, it.name, group = GROUP_BIKE)
         }
     }
-    val merged = out.map { it.copy(checked = checkedByName[it.name] ?: false) }
+
+    // Wykorzystujemy pozycję starej listy najwyżej raz, aby duplikaty
+    // nazw nie dziedziczyły przypadkowo wspólnego stanu.
+    val remaining = previousItems.filter { it.group != GROUP_CUSTOM }.toMutableList()
+    val merged = templates.map { template ->
+        val byId = remaining.indexOfFirst {
+            it.id == template.id && it.group == template.group
+        }
+        val byName = if (byId == -1) remaining.indexOfFirst {
+            it.name == template.name && it.group == template.group
+        } else -1
+        val index = if (byId >= 0) byId else byName
+        val checked = if (index >= 0) {
+            remaining.removeAt(index).checked
+        } else if (previousItems.isEmpty()) {
+            checkedByName[template.name] ?: false
+        } else {
+            false
+        }
+        template.copy(checked = checked)
+    }
     return merged + custom
 }
