@@ -155,7 +155,7 @@ object Weather {
             val body = get("https://api.open-meteo.com/v1/forecast" +
                 "?latitude=${place.lat}&longitude=${place.lon}" +
                 "&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,weather_code" +
-                "&timezone=auto") ?: return null
+                "&wind_speed_unit=ms&timezone=auto") ?: return null
             val cur = JSONObject(body).optJSONObject("current") ?: return null
             Current(
                 source = "Open-Meteo",

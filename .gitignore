@@ -13,3 +13,5 @@ local.properties
 *.keystore
 *.jks
 app/release.keystore
+*.bak
+*.before-*.bak

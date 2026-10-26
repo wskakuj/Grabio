@@ -1,4 +1,4 @@
-# Co nowego w Grabio v1.0.19
+# Co nowego w Grabio v1.0.20
 
-* gpt fix Synchronizacja list według ID
+* Pogoda i testy końcowe
 
