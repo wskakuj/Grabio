@@ -30,7 +30,8 @@ const val THEME_DARK = "dark"
 data class ChecklistItem(
     val id: String,
     val name: String,
-    val note: String = ""
+    val note: String = "",
+    val priority: Int = 0
 )
 
 /** Pozycja na konkretny dzień (z odhaczeniem i grupą). */
@@ -39,7 +40,8 @@ data class DayItem(
     val id: String,
     val name: String,
     val checked: Boolean = false,
-    val group: String = GROUP_TRAINING
+    val group: String = GROUP_TRAINING,
+    val priority: Int = 0
 )
 
 /** Zapis jednego dnia. */

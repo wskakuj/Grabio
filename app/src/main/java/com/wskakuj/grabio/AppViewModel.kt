@@ -16,6 +16,7 @@ import com.wskakuj.grabio.data.TRANSPORT_BIKE
 import com.wskakuj.grabio.data.buildDayItems
 import com.wskakuj.grabio.data.defaultBag
 import com.wskakuj.grabio.data.newItemId
+import com.wskakuj.grabio.notify.PackingReminder
 import com.wskakuj.grabio.notify.ProgressNotifier
 import com.wskakuj.grabio.notify.ReminderScheduler
 import com.wskakuj.grabio.update.UpdateManager
@@ -71,6 +72,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         _data.value = newData
         store.save(newData)
         ProgressNotifier.sync(getApplication(), newData.days.find { it.date == todayKey() })
+        PackingReminder.cancelIfFinished(getApplication(), newData.days.find { it.date == todayKey() })
     }
 
     fun newId(): String = newItemId()
@@ -148,6 +150,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             d.copy(days = d.days.map {
                 if (it.date == key) it.copy(bag = mode) else it
             })
+        }
+    }
+
+    /** 0: zwykły, 1: ważny, 2: krytyczny. Zmiana na liście dnia
+     * aktualizuje także źródłowy szablon na przyszłość. */
+    fun cyclePriority(date: String, id: String) {
+        update { data ->
+            val item = data.days.find { it.date == date }?.items?.find { it.id == id }
+                ?: return@update data
+            val next = (item.priority + 1) % 3
+            val day = data.days.map { record ->
+                if (record.date != date) record
+                else record.copy(items = record.items.map {
+                    if (it.id == id) it.copy(priority = next) else it
+                })
+            }
+            data.copy(
+                days = day,
+                weekPlan = data.weekPlan.mapValues { (_, items) ->
+                    items.map { if (item.group == GROUP_TRAINING && it.id == id) it.copy(priority = next) else it }
+                },
+                essentials = data.essentials.map {
+                    if (item.group == GROUP_ESSENTIAL && it.id == id) it.copy(priority = next) else it
+                },
+                bikeExtras = data.bikeExtras.map {
+                    if (item.group == GROUP_BIKE && it.id == id) it.copy(priority = next) else it
+                }
+            )
         }
     }
 

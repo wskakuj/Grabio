@@ -400,6 +400,17 @@ private fun ItemRow(
             }
         )
         Text(
+            when (item.priority) {
+                2 -> "‼"
+                1 -> "★"
+                else -> "☆"
+            },
+            modifier = Modifier.clickable { vm.cyclePriority(dateKey, item.id) }
+                .padding(horizontal = 6.dp),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
             item.name,
             modifier = Modifier.weight(1f),
             color = textColor,

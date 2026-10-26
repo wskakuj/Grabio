@@ -24,14 +24,14 @@ fun buildDayItems(
 ): List<DayItem> {
     val templates = mutableListOf<DayItem>()
     data.weekPlan[weekday].orEmpty().forEach {
-        templates += DayItem(it.id, it.name, group = GROUP_TRAINING)
+        templates += DayItem(it.id, it.name, group = GROUP_TRAINING, priority = it.priority)
     }
     data.essentials.forEach {
-        templates += DayItem(it.id, it.name, group = GROUP_ESSENTIAL)
+        templates += DayItem(it.id, it.name, group = GROUP_ESSENTIAL, priority = it.priority)
     }
     if (transport == TRANSPORT_BIKE) {
         data.bikeExtras.forEach {
-            templates += DayItem(it.id, it.name, group = GROUP_BIKE)
+            templates += DayItem(it.id, it.name, group = GROUP_BIKE, priority = it.priority)
         }
     }
 

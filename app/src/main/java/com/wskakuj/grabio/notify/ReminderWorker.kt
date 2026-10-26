@@ -35,7 +35,20 @@ class ReminderWorker(
 
         // Nie zawracaj głowy w dniu wolnym ani wtedy, gdy wszystko już spakowane.
         val today = Store(ctx).load().days.find { it.date == LocalDate.now().toString() }
-        if (today != null && (today.restDay || today.complete)) return Result.success()
+        if (today != null && (today.restDay || today.complete)) {
+            PackingReminder.cancelIfFinished(ctx, today)
+            return Result.success()
+        }
+        val remaining = PackingReminder.remaining(today)
+        // No day list yet: invite the user to create one, never list guessed items.
+        val body = if (today == null || today.items.isEmpty()) {
+            "Otwórz Grabio i przygotuj dzisiejszą listę."
+        } else {
+            "Brakuje ${remaining.size} z ${today.total}: " +
+                remaining.take(5).joinToString(", ") {
+                    (if (it.priority == 2) "‼ " else if (it.priority == 1) "★ " else "") + it.name
+                } + if (remaining.size > 5) "…" else ""
+        }
 
         val granted = ContextCompat.checkSelfPermission(
             ctx, Manifest.permission.POST_NOTIFICATIONS
@@ -59,12 +72,9 @@ class ReminderWorker(
         val notification = NotificationCompat.Builder(ctx, Notifications.CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Czas się spakować na trening")
-            .setContentText("Otwórz Grabio i przejdź listę.")
+            .setContentText(body)
             .setStyle(
-                NotificationCompat.BigTextStyle().bigText(
-                    "Otwórz Grabio i przejdź listę: rzeczy na trening, " +
-                        "kłódka do szafki, bateria słuchawek, inhalator, miętówki."
-                )
+                NotificationCompat.BigTextStyle().bigText(body)
             )
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)

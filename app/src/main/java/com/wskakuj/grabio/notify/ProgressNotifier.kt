@@ -42,15 +42,17 @@ object ProgressNotifier {
     fun syncFromStore(context: Context) {
         val data = Store(context).load()
         val key = LocalDate.now().toString()
-        sync(context, data.days.find { it.date == key })
+        val record = data.days.find { it.date == key }
+        sync(context, record)
+        PackingReminder.cancelIfFinished(context, record)
     }
 
     fun sync(context: Context, record: DayRecord?) {
         ensureChannel(context)
         val nm = NotificationManagerCompat.from(context)
 
-        if (record == null || record.items.isEmpty()) {
-            if (posted) {
+        if (record == null || record.items.isEmpty() || record.complete || record.restDay) {
+            if (posted || record?.complete == true || record?.restDay == true) {
                 nm.cancel(ID)
                 posted = false
             }
@@ -61,7 +63,7 @@ object ProgressNotifier {
         if (!posted && record.done == 0) return
         posted = true
 
-        val remaining = record.items.filter { !it.checked }
+        val remaining = PackingReminder.remaining(record)
         val text = when {
             record.complete -> "Wszystko spakowane! 🎉"
             else -> "Zostało: " + remaining.take(4).joinToString(", ") { it.name } +

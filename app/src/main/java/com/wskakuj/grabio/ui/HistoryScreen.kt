@@ -150,29 +150,41 @@ fun HistoryScreen(vm: AppViewModel, data: AppData) {
             }
         }
 
-        val forgotten = statDays
-            .flatMap { day -> day.items.filter { !it.checked }.map { it.name } }
-            .groupingBy { it }
-            .eachCount()
-            .entries
-            .sortedByDescending { it.value }
+        // "Pominięty" oznacza niezaznaczony na koniec zapisanego dnia,
+        // nie dowiedzione zapomnienie. Uwzględniamy tylko ukończone dni
+        // kalendarzowe z co najmniej jednym odhaczeniem.
+        val omissions = statDays
+            .flatMap { day -> day.items.map { item -> Triple(item.id, item.name, item.checked) } }
+            .groupBy { it.first }
+            .map { (_, observations) ->
+                val missed = observations.count { !it.third }
+                Triple(observations.last().second, missed, observations.size)
+            }
+            .filter { it.second > 0 }
+            .sortedWith(compareByDescending<Triple<String, Int, Int>> { it.second }
+                .thenByDescending { it.second.toDouble() / it.third })
             .take(6)
 
-        if (forgotten.isNotEmpty()) {
+        if (omissions.isNotEmpty()) {
             Spacer(Modifier.height(16.dp))
             Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                 Column(Modifier.padding(16.dp)) {
                     Text(
-                        "Najczęściej zapominane",
+                        "Najczęściej nieodhaczone",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(Modifier.height(6.dp))
-                    forgotten.forEach { (name, count) ->
+                    Text(
+                        "Na koniec poprzednich dni z aktywnym pakowaniem (nie oznacza na pewno zapomnienia).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    omissions.forEach { (name, missed, total) ->
                         Text(
-                            "• $name — $count razy",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            "• $name — $missed/$total dni (${missed * 100 / total}%)",
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }

@@ -1,4 +1,3 @@
-# Co nowego w Grabio v1.0.20
+# Co nowego w Grabio v1.0.21
 
-* Pogoda i testy końcowe
-
+- 
