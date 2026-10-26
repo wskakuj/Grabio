@@ -20,6 +20,7 @@ import com.wskakuj.grabio.notify.ProgressNotifier
 import com.wskakuj.grabio.notify.ReminderScheduler
 import com.wskakuj.grabio.update.UpdateManager
 import com.wskakuj.grabio.weather.Weather
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -51,6 +52,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     init {
         // odtworzenie wskaźnika postępu po ponownym uruchomieniu aplikacji
         ProgressNotifier.sync(app, _data.value.days.find { it.date == todayKey() })
+        // Restore missing reminder jobs without shifting existing schedules.
+        viewModelScope.launch(Dispatchers.IO) {
+            val settings = _data.value
+            ReminderScheduler.ensureScheduled(
+                app,
+                settings.reminderEnabled,
+                settings.weekdayHour,
+                settings.weekdayMinute,
+                settings.weekendHour,
+                settings.weekendMinute
+            )
+        }
     }
 
     private fun update(block: (AppData) -> AppData) {

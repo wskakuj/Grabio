@@ -1,4 +1,4 @@
-# Co nowego w Grabio v1.0.17
+# Co nowego w Grabio v1.0.18
 
-* poprawka od gpt
+* gpt Przypomnienia fix
 
