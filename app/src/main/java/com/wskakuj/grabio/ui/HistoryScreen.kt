@@ -33,6 +33,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import com.wskakuj.grabio.AppViewModel
 import com.wskakuj.grabio.data.AppData
 import com.wskakuj.grabio.data.DayRecord
+import com.wskakuj.grabio.data.DayItem
 import com.wskakuj.grabio.data.GROUP_BIKE
 import com.wskakuj.grabio.data.GROUP_CUSTOM
 import com.wskakuj.grabio.data.GROUP_ESSENTIAL
@@ -420,43 +425,19 @@ private fun SelectedDayCard(date: String, day: DayRecord?) {
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(4.dp))
-                val groups = listOf(
-                    GROUP_TRAINING to "Trening",
-                    GROUP_ESSENTIAL to "Codziennie",
-                    GROUP_BIKE to "Rower",
-                    GROUP_CUSTOM to "Własne"
+                // Obie sekcje są zwinięte po wejściu na ekran oraz zmianie daty.
+                HistoryPackingSection(
+                    selectedDate = date,
+                    title = "Niespakowane",
+                    items = day.items.filterNot { it.checked },
+                    checked = false
                 )
-                groups.forEach { (group, title) ->
-                    val items = day.items.filter { it.group == group }
-                    if (items.isNotEmpty()) {
-                        Text(
-                            title,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        items.forEach { item ->
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    if (item.checked) "✓" else "○",
-                                    modifier = Modifier.padding(end = 10.dp),
-                                    color = if (item.checked) completedColor else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    item.name,
-                                    modifier = Modifier.weight(1f),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                if (item.priority > 0) {
-                                    Text(
-                                        if (item.priority == 2) "‼" else "★",
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                HistoryPackingSection(
+                    selectedDate = date,
+                    title = "Spakowane",
+                    items = day.items.filter { it.checked },
+                    checked = true
+                )
             } else if (day == null) {
                 Text(
                     "Nie ma zapisanych informacji o pakowaniu tego dnia.",
@@ -465,6 +446,94 @@ private fun SelectedDayCard(date: String, day: DayRecord?) {
                 )
             } else if (day.restDay) {
                 Text("Ten dzień został oznaczony jako odpoczynek.", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
+
+/** Rozwijana lista jednej kategorii; bez zmian w historycznym zapisie. */
+@Composable
+private fun HistoryPackingSection(
+    selectedDate: String,
+    title: String,
+    items: List<DayItem>,
+    checked: Boolean
+) {
+    var expanded by remember(selectedDate) { mutableStateOf(false) }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded }
+                    .padding(horizontal = 14.dp, vertical = 13.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    if (checked) "✓" else "○",
+                    color = if (checked) completedColor else incompleteColor,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.size(10.dp))
+                Text(
+                    "$title (${items.size})",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    if (expanded) "▲" else "▼",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (expanded) {
+                Column(
+                    modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(9.dp)
+                ) {
+                    if (items.isEmpty()) {
+                        Text(
+                            if (checked) "Nic jeszcze nie jest odhaczone." else "Wszystko spakowane!",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    items.forEach { item ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                if (item.checked) "✓" else "○",
+                                color = if (item.checked) completedColor else incompleteColor,
+                                modifier = Modifier.padding(end = 10.dp)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(item.name, style = MaterialTheme.typography.bodyMedium)
+                                val groupName = when (item.group) {
+                                    GROUP_TRAINING -> "Trening"
+                                    GROUP_ESSENTIAL -> "Codziennie"
+                                    GROUP_BIKE -> "Rower"
+                                    GROUP_CUSTOM -> "Własne"
+                                    else -> "Inne"
+                                }
+                                Text(
+                                    groupName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (item.priority > 0) {
+                                Text(
+                                    if (item.priority == 2) "‼" else "★",
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }

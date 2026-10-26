@@ -1,4 +1,3 @@
-# Co nowego w Grabio v1.0.22
+# Co nowego w Grabio v1.0.23
 
-* nowa Historia z kalendarzem
-
+- 
